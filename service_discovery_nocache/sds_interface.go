@@ -9,29 +9,28 @@ var (
 type CInitProperty struct {
 	// zookeeper ...
 	ServerMode   string
-	ConnProperty CConnectProperty
-}
-
-type CNet struct {
-	ServerHost   string
-	ServerPort   int
 	ConnTimeoutS int
-	ServiceName  string
+	Conns        []CConnectProperty
 }
 
 type CConnectProperty struct {
-	Nets []CNet
+	ServerHost string
+	ServerPort int
+	ServiceId  string
 }
 
 type CServiceDiscoveryNocache interface {
 	Connect() error
-	start(property *CInitProperty) error
+	AddConnProperty(conn *CConnectProperty) error
+	UpdateConnProperty(conn *CConnectProperty) error
+	DeleteConnProperty(serviceId *string) error
+	init(conns *[]CConnectProperty, connTimeout int) error
 }
 
 func New(property *CInitProperty) CServiceDiscoveryNocache {
 	if property.ServerMode == ServerModeZookeeper {
 		adapter := &CZkAdapter{}
-		adapter.start(property)
+		adapter.init(&property.Conns, property.ConnTimeoutS)
 		return adapter
 	}
 	return nil

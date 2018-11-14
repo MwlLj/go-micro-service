@@ -6,9 +6,9 @@ import (
 )
 
 func main() {
-	var nets []s.CNet
-	nets = append(nets, s.CNet{ServerHost: "127.0.0.1", ServerPort: 2181})
-	sds := s.New(&s.CInitProperty{ServerMode: s.ServerModeZookeeper, ConnProperty: s.CConnectProperty{nets}})
+	var conns []s.CConnectProperty
+	conns = append(conns, s.CConnectProperty{ServerHost: "127.0.0.1", ServerPort: 2181, ServiceId: "server_1"})
+	sds := s.New(&s.CInitProperty{ServerMode: s.ServerModeZookeeper, Conns: conns, ConnTimeoutS: 10})
 	err := sds.Connect()
 	if err != nil {
 		fmt.Println(err)

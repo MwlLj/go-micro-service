@@ -13,57 +13,75 @@ import (
 var _ = fmt.Println
 
 type CZkAdapter struct {
-	m_hostPro *zk.DNSHostProvider
-	m_hostMap sync.Map
+	m_connTimeout int
+	m_connMap     sync.Map
 }
 
-func (this *CZkAdapter) start(property *CInitProperty) error {
-	hosts := this.connProperty2Hosts(&property.ConnProperty)
-	this.m_hostPro = new(zk.DNSHostProvider)
-	err := this.m_hostPro.Init(*hosts)
-	if err != nil {
-		fmt.Println(err)
-		return err
+type CConnInfo struct {
+	host string
+}
+
+func (this *CZkAdapter) init(conns *[]CConnectProperty, connTimeout int) error {
+	this.m_connTimeout = connTimeout
+	for _, conn := range *conns {
+		this.AddConnProperty(&conn)
 	}
-	// server, retryStart := hostPro.Next() //获得host
-	// hostPro.Connected()                  //连接成功后会调用
 	return nil
 }
 
 func (this *CZkAdapter) Connect() error {
-	host, _ := this.m_hostPro.Next()
-	v, ok := this.m_hostMap.Load(host)
-	if !ok {
-		return errors.New("[Error] no vaild host")
-	}
-	net := v.(CNet)
-	conn, connChan, err := zk.Connect([]string{host}, time.Duration(net.ConnTimeoutS))
+	hosts := this.toHosts()
+	conn, connChan, err := zk.Connect(*hosts, time.Duration(this.m_connTimeout)*time.Second)
 	if err != nil {
 		fmt.Println("connect zookeeper server error")
 		return err
 	}
-	select {
-	case event := <-connChan:
-		if event.State == zk.StateConnected {
-			return nil
+end:
+	for {
+		select {
+		case event := <-connChan:
+			if event.State == zk.StateConnected {
+				fmt.Println("connect success")
+				break end
+			}
+		case <-time.After(time.Second * 3):
+			return errors.New("[Error] connect timeout")
 		}
-	case <-time.After(time.Second * 3):
-		return errors.New("[Error] connect timeout")
 	}
 	_ = conn
 	return nil
 }
 
-func (this *CZkAdapter) connProperty2Hosts(property *CConnectProperty) *[]string {
-	var hosts []string
-	for _, net := range property.Nets {
-		host := this.joinHost(net.ServerHost, net.ServerPort)
-		hosts = append(hosts, host)
-		this.m_hostMap.Store(host, net)
-	}
-	return &hosts
+func (this *CZkAdapter) AddConnProperty(conn *CConnectProperty) error {
+	info := CConnInfo{}
+	info.host = this.joinHost(conn.ServerHost, conn.ServerPort)
+	this.m_connMap.Store(conn.ServiceId, info)
+	return nil
+}
+
+func (this *CZkAdapter) UpdateConnProperty(conn *CConnectProperty) error {
+	info := CConnInfo{}
+	info.host = this.joinHost(conn.ServerHost, conn.ServerPort)
+	this.m_connMap.Store(conn.ServiceId, info)
+	return nil
+}
+
+func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
+	this.m_connMap.Delete(serviceId)
+	return nil
 }
 
 func (*CZkAdapter) joinHost(ip string, port int) string {
 	return strings.Join([]string{ip, strconv.FormatInt(int64(port), 10)}, ":")
+}
+
+func (this *CZkAdapter) toHosts() *[]string {
+	var hosts []string
+	f := func(k, v interface{}) bool {
+		info := v.(CConnInfo)
+		hosts = append(hosts, info.host)
+		return true
+	}
+	this.m_connMap.Range(f)
+	return &hosts
 }
