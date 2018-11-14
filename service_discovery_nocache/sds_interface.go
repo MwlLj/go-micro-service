@@ -24,14 +24,14 @@ type CConnectProperty struct {
 }
 
 type CServiceDiscoveryNocache interface {
-	Init(property *CInitProperty) error
 	Connect() error
+	start(property *CInitProperty) error
 }
 
 func New(property *CInitProperty) CServiceDiscoveryNocache {
 	if property.ServerMode == ServerModeZookeeper {
 		adapter := &CZkAdapter{}
-		adapter.Init(property)
+		adapter.start(property)
 		return adapter
 	}
 	return nil

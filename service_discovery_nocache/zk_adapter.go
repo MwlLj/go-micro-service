@@ -17,7 +17,7 @@ type CZkAdapter struct {
 	m_hostMap sync.Map
 }
 
-func (this *CZkAdapter) Init(property *CInitProperty) error {
+func (this *CZkAdapter) start(property *CInitProperty) error {
 	hosts := this.connProperty2Hosts(&property.ConnProperty)
 	this.m_hostPro = new(zk.DNSHostProvider)
 	err := this.m_hostPro.Init(*hosts)
