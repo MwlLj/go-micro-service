@@ -8,7 +8,9 @@ var (
 
 type CInitProperty struct {
 	// zookeeper ...
+	PathPrefix   string
 	ServerMode   string
+	ServerName   string
 	ConnTimeoutS int
 	Conns        []CConnectProperty
 }
@@ -24,13 +26,13 @@ type CServiceDiscoveryNocache interface {
 	AddConnProperty(conn *CConnectProperty) error
 	UpdateConnProperty(conn *CConnectProperty) error
 	DeleteConnProperty(serviceId *string) error
-	init(conns *[]CConnectProperty, connTimeout int) error
+	init(conns *[]CConnectProperty, serverName string, connTimeout int, pathPrefix string) error
 }
 
 func New(property *CInitProperty) CServiceDiscoveryNocache {
 	if property.ServerMode == ServerModeZookeeper {
 		adapter := &CZkAdapter{}
-		adapter.init(&property.Conns, property.ConnTimeoutS)
+		adapter.init(&property.Conns, property.ServerName, property.ConnTimeoutS, property.PathPrefix)
 		return adapter
 	}
 	return nil
