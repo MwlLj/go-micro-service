@@ -1,6 +1,7 @@
 package service_discovery_nocache
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
@@ -92,6 +93,10 @@ func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
 	return nil
 }
 
+func (this *CZkAdapter) SetServerUniqueCode(uniqueCode string) {
+	this.m_serverUniqueCode = uniqueCode
+}
+
 func (this *CZkAdapter) SetPayload(payload string) {
 	this.m_nodePayload = payload
 }
@@ -100,11 +105,28 @@ func (this *CZkAdapter) GetMasterPayload() (*string, error) {
 	return nil, nil
 }
 
+func (this *CZkAdapter) joinNodeData() (*string, error) {
+	nodeJson := CNodeJson{
+		ServerUniqueCode: this.m_serverUniqueCode,
+		NodePayload:      this.m_nodePayload}
+	b, err := json.Marshal(&nodeJson)
+	if err != nil {
+		return nil, err
+	}
+	data := string(b)
+	return &data, nil
+}
+
 func (this *CZkAdapter) createMasterAndNormalNode() error {
-	isExist, err := this.createMasterNode("I'm is master")
+	data, err := this.joinNodeData()
+	if err != nil {
+		fmt.Println("join Node Data error")
+		return err
+	}
+	isExist, err := this.createMasterNode(*data)
 	if isExist || err != nil {
 		fmt.Println("master is not exist")
-		err = this.createNormalNode("I'm is normal")
+		err = this.createNormalNode(*data)
 	}
 	return err
 }
@@ -139,7 +161,11 @@ func (this *CZkAdapter) createNode(path string, flag int32, payload *string, isL
 		return true, nil
 	}
 	fmt.Println("create node: ", node, isExist)
-	afterCreateNode, err := this.m_conn.Create(node, []byte(*payload), flag, zk.WorldACL(zk.PermAll))
+	var data string = ""
+	if payload != nil {
+		data = *payload
+	}
+	afterCreateNode, err := this.m_conn.Create(node, []byte(data), flag, zk.WorldACL(zk.PermAll))
 	if err == nil {
 		fmt.Println("create node success: ", node)
 	}

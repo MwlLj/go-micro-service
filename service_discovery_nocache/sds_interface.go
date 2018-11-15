@@ -25,6 +25,7 @@ type CConnectProperty struct {
 
 type CServiceDiscoveryNocache interface {
 	Connect() error
+	SetServerUniqueCode(uniqueCode string)
 	SetPayload(payload string)
 	GetMasterPayload() (*string, error)
 	AddConnProperty(conn *CConnectProperty) error

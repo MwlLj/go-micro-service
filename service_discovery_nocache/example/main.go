@@ -22,7 +22,6 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	fmt.Println("success")
 	for {
 		time.Sleep(100 * time.Millisecond)
 	}
