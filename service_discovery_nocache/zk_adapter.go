@@ -17,19 +17,28 @@ var (
 )
 
 type CZkAdapter struct {
-	m_pathPrefix  string
-	m_serverName  string
-	m_connTimeout int
-	m_connMap     sync.Map
-	m_conn        *zk.Conn
+	m_pathPrefix       string
+	m_serverName       string
+	m_serverUniqueCode string
+	m_nodePayload      string
+	m_connTimeout      int
+	m_connMap          sync.Map
+	m_conn             *zk.Conn
 }
 
 type CConnInfo struct {
 	host string
 }
 
-func (this *CZkAdapter) init(conns *[]CConnectProperty, serverName string, connTimeout int, pathPrefix string) error {
+type CNodeJson struct {
+	ServerUniqueCode string `json:"serveruniquecode"`
+	NodePayload      string `json:"nodepayload"`
+}
+
+func (this *CZkAdapter) init(conns *[]CConnectProperty, serverName string, serverUniqueCode string, payload string, connTimeout int, pathPrefix string) error {
 	this.m_serverName = serverName
+	this.m_serverUniqueCode = serverUniqueCode
+	this.m_nodePayload = payload
 	this.m_connTimeout = connTimeout
 	this.m_pathPrefix = pathPrefix
 	for _, conn := range *conns {
@@ -83,12 +92,17 @@ func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
 	return nil
 }
 
+func (this *CZkAdapter) SetPayload(payload string) {
+	this.m_nodePayload = payload
+}
+
+func (this *CZkAdapter) GetMasterPayload() (*string, error) {
+	return nil, nil
+}
+
 func (this *CZkAdapter) createMasterAndNormalNode() error {
 	isExist, err := this.createMasterNode("I'm is master")
-	if err != nil {
-		return err
-	}
-	if isExist {
+	if isExist || err != nil {
 		fmt.Println("master is not exist")
 		err = this.createNormalNode("I'm is normal")
 	}
@@ -192,8 +206,8 @@ func (this *CZkAdapter) createMasterNode(payload string) (exist bool, e error) {
 	}
 	masterPath = strings.Join([]string{masterRoot, master}, "/")
 	isExist, err := this.createNode(masterPath, zk.FlagEphemeral, &payload, false)
-	if err == nil && isExist {
-		fmt.Println("create master success")
+	if err == nil {
+		fmt.Println("[SUCCESS] Identify: master node")
 	}
 	return isExist, err
 }
@@ -206,6 +220,9 @@ func (this *CZkAdapter) createNormalNode(payload string) error {
 		normalPath = strings.Join([]string{this.m_serverName, "node"}, "/")
 	}
 	_, err := this.createNode(normalPath, 3, &payload, true)
+	if err == nil {
+		fmt.Println("[SUCCESS] Identify: normal node")
+	}
 	return err
 }
 

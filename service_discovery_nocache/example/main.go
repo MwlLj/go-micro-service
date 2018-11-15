@@ -13,6 +13,7 @@ func main() {
 		PathPrefix:   "mico-service",
 		ServerMode:   s.ServerModeZookeeper,
 		ServerName:   "testserver",
+		NodePayload:  `{"ip":"192.168.9.15","port":50000}`,
 		Conns:        conns,
 		ConnTimeoutS: 10})
 	err := sds.Connect()
