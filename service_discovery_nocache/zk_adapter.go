@@ -17,6 +17,7 @@ type CZkAdapter struct {
 	m_serverName  string
 	m_connTimeout int
 	m_connMap     sync.Map
+	m_conn        *zk.Conn
 }
 
 type CConnInfo struct {
@@ -35,7 +36,9 @@ func (this *CZkAdapter) init(conns *[]CConnectProperty, serverName string, connT
 
 func (this *CZkAdapter) Connect() error {
 	hosts := this.toHosts()
-	conn, connChan, err := zk.Connect(*hosts, time.Second)
+	var connChan <-chan zk.Event
+	var err error = nil
+	this.m_conn, connChan, err = zk.Connect(*hosts, time.Second)
 	if err != nil {
 		fmt.Println("connect zookeeper server error")
 		return err
@@ -54,14 +57,7 @@ end:
 		}
 	}
 	// connect success
-	isExist, err := this.createMasterNode(conn, "I'm is master")
-	if err != nil {
-		return err
-	}
-	if isExist {
-		err = this.createNormalNode(conn, "I'm is normal")
-	}
-	return err
+	return this.create()
 }
 
 func (this *CZkAdapter) AddConnProperty(conn *CConnectProperty) error {
@@ -83,38 +79,53 @@ func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
 	return nil
 }
 
-func (this *CZkAdapter) createParents(conn *zk.Conn, root string) error {
-	this._createParents(conn, root)
-	this.createNode(conn, root, 0, nil)
+func (this *CZkAdapter) create() error {
+	isExist, err := this.createMasterNode("I'm is master")
+	if err != nil {
+		return err
+	}
+	if isExist {
+		fmt.Println("master is not exist")
+		err = this.createNormalNode("I'm is normal")
+	}
+	return err
+}
+
+func (this *CZkAdapter) createParents(root string) error {
+	this._createParents(root)
+	this.createNode(root, 0, nil)
 	return nil
 }
 
-func (this *CZkAdapter) _createParents(conn *zk.Conn, root string) error {
+func (this *CZkAdapter) _createParents(root string) error {
 	isRoot, parent := this.getParentNode(root)
 	if isRoot == true {
 		return nil
 	} else {
-		this._createParents(conn, parent)
-		this.createNode(conn, parent, 0, nil)
+		this._createParents(parent)
+		this.createNode(parent, 0, nil)
 	}
 	return nil
 }
 
-func (this *CZkAdapter) createNode(conn *zk.Conn, path string, flag int32, payload *string) (exist bool, e error) {
+func (this *CZkAdapter) createNode(path string, flag int32, payload *string) (exist bool, e error) {
+	// return -> exist :  before create node is exist
 	node := strings.Join([]string{"/", path}, "")
-	isExist, _, err := conn.Exists(node)
+	isExist, _, err := this.m_conn.Exists(node)
 	if err != nil {
+		fmt.Println("judge node is exist error", node)
 		return false, err
 	}
 	if isExist {
+		fmt.Println("node already exist: ", node)
 		return true, nil
 	}
 	fmt.Println("create node: ", node, isExist)
-	_, err = conn.Create(node, []byte(*payload), flag, zk.WorldACL(zk.PermAll))
+	_, err = this.m_conn.Create(node, []byte(*payload), flag, zk.WorldACL(zk.PermAll))
 	if err == nil {
 		fmt.Println("create node success: ", node)
 	}
-	return true, err
+	return false, err
 }
 
 func (this *CZkAdapter) getParentNode(path string) (isRoot bool, parent string) {
@@ -126,7 +137,7 @@ func (this *CZkAdapter) getParentNode(path string) (isRoot bool, parent string) 
 	return false, strings.Join(li[:length-1], "/")
 }
 
-func (this *CZkAdapter) createMasterNode(conn *zk.Conn, payload string) (exist bool, e error) {
+func (this *CZkAdapter) createMasterNode(payload string) (exist bool, e error) {
 	var masterRoot string
 	var masterPath string
 	if this.m_pathPrefix != "" {
@@ -134,22 +145,26 @@ func (this *CZkAdapter) createMasterNode(conn *zk.Conn, payload string) (exist b
 	} else {
 		masterRoot = this.m_serverName
 	}
-	err := this.createParents(conn, masterRoot)
+	err := this.createParents(masterRoot)
 	if err != nil {
 		return false, err
 	}
 	masterPath = strings.Join([]string{masterRoot, "master"}, "/")
-	return this.createNode(conn, masterPath, zk.FlagEphemeral, &payload)
+	isExist, err := this.createNode(masterPath, zk.FlagEphemeral, &payload)
+	if err == nil && isExist {
+		fmt.Println("create master success")
+	}
+	return isExist, err
 }
 
-func (this *CZkAdapter) createNormalNode(conn *zk.Conn, payload string) error {
+func (this *CZkAdapter) createNormalNode(payload string) error {
 	var normalPath string
 	if this.m_pathPrefix != "" {
 		normalPath = strings.Join([]string{this.m_pathPrefix, this.m_serverName, "node"}, "/")
 	} else {
 		normalPath = strings.Join([]string{this.m_serverName, "node"}, "/")
 	}
-	_, err := this.createNode(conn, normalPath, 3, &payload)
+	_, err := this.createNode(normalPath, 3, &payload)
 	return err
 }
 
