@@ -1,11 +1,11 @@
 package service_discovery_nocache
 
 import (
+	proto "../common_proto"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -27,10 +27,6 @@ type CZkAdapter struct {
 	m_conn             *zk.Conn
 }
 
-type CConnInfo struct {
-	host string
-}
-
 type CNodeJson struct {
 	ServerUniqueCode string `json:"serveruniquecode"`
 	NodePayload      string `json:"nodepayload"`
@@ -49,7 +45,7 @@ func (this *CZkAdapter) init(conns *[]CConnectProperty, serverName string, serve
 }
 
 func (this *CZkAdapter) Connect() error {
-	hosts := this.toHosts()
+	hosts := proto.ToHosts(&this.m_connMap)
 	var connChan <-chan zk.Event
 	var err error = nil
 	this.m_conn, connChan, err = zk.Connect(*hosts, time.Second)
@@ -75,15 +71,15 @@ end:
 }
 
 func (this *CZkAdapter) AddConnProperty(conn *CConnectProperty) error {
-	info := CConnInfo{}
-	info.host = this.joinHost(conn.ServerHost, conn.ServerPort)
+	info := proto.CConnInfo{}
+	info.Host = *proto.JoinHost(conn.ServerHost, conn.ServerPort)
 	this.m_connMap.Store(conn.ServiceId, info)
 	return nil
 }
 
 func (this *CZkAdapter) UpdateConnProperty(conn *CConnectProperty) error {
-	info := CConnInfo{}
-	info.host = this.joinHost(conn.ServerHost, conn.ServerPort)
+	info := proto.CConnInfo{}
+	info.Host = *proto.JoinHost(conn.ServerHost, conn.ServerPort)
 	this.m_connMap.Store(conn.ServiceId, info)
 	return nil
 }
@@ -123,7 +119,7 @@ func (this *CZkAdapter) createMasterAndNormalNode() error {
 		fmt.Println("[ERROR] join Node Data error")
 		return err
 	}
-	pathPrefix := this.joinPathPrefix()
+	pathPrefix := proto.JoinPathPrefix(&this.m_pathPrefix, &this.m_serverName)
 	err = this.createParents(*pathPrefix)
 	if err != nil {
 		fmt.Println("[ERROR] create parents error")
@@ -151,7 +147,7 @@ func (this *CZkAdapter) createParents(root string) error {
 }
 
 func (this *CZkAdapter) _createParents(root string) error {
-	isRoot, parent := this.getParentNode(root)
+	isRoot, parent := proto.GetParentNode(root)
 	if isRoot == true {
 		return nil
 	} else {
@@ -206,7 +202,7 @@ func (this *CZkAdapter) checkNodeDelete(selfNode string, ech <-chan zk.Event) {
 					fmt.Println("[ERROR] join Node Data error")
 					return
 				}
-				pathPrefix := this.joinPathPrefix()
+				pathPrefix := proto.JoinPathPrefix(&this.m_pathPrefix, &this.m_serverName)
 				err = this.createParents(*pathPrefix)
 				if err != nil {
 					fmt.Println("[ERROR] create parents error")
@@ -231,26 +227,6 @@ func (this *CZkAdapter) checkNodeDelete(selfNode string, ech <-chan zk.Event) {
 			}
 		}
 	}
-}
-
-func (this *CZkAdapter) getParentNode(path string) (isRoot bool, parent string) {
-	li := strings.Split(path, "/")
-	length := len(li)
-	if length == 1 {
-		return true, li[0]
-	}
-	return false, strings.Join(li[:length-1], "/")
-}
-
-func (this *CZkAdapter) joinPathPrefix() *string {
-	var path string
-	if this.m_pathPrefix != "" {
-		path = strings.Join([]string{this.m_pathPrefix, this.m_serverName}, "/")
-	} else {
-		path = this.m_serverName
-	}
-	path = strings.Join([]string{"/", path}, "")
-	return &path
 }
 
 func (this *CZkAdapter) createMasterNode(palyload *string, pathPrefix *string) error {
@@ -279,7 +255,7 @@ func (this *CZkAdapter) createNormalNode(palyload *string, pathPrefix *string) e
 }
 
 func (this *CZkAdapter) listenMasterNode(nodePath *string) error {
-	_, parent := this.getParentNode(*nodePath)
+	_, parent := proto.GetParentNode(*nodePath)
 	masterNode := strings.Join([]string{parent, master}, "/")
 	_, _, ech, err := this.m_conn.ExistsW(masterNode)
 	if err != nil {
@@ -288,19 +264,4 @@ func (this *CZkAdapter) listenMasterNode(nodePath *string) error {
 	}
 	go this.checkNodeDelete(*nodePath, ech)
 	return nil
-}
-
-func (*CZkAdapter) joinHost(ip string, port int) string {
-	return strings.Join([]string{ip, strconv.FormatInt(int64(port), 10)}, ":")
-}
-
-func (this *CZkAdapter) toHosts() *[]string {
-	var hosts []string
-	f := func(k, v interface{}) bool {
-		info := v.(CConnInfo)
-		hosts = append(hosts, info.host)
-		return true
-	}
-	this.m_connMap.Range(f)
-	return &hosts
 }
