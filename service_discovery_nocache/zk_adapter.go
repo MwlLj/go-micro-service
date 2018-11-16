@@ -120,20 +120,33 @@ func (this *CZkAdapter) joinNodeData() (*string, error) {
 func (this *CZkAdapter) createMasterAndNormalNode() error {
 	data, err := this.joinNodeData()
 	if err != nil {
-		fmt.Println("join Node Data error")
+		fmt.Println("[ERROR] join Node Data error")
 		return err
 	}
-	isExist, err := this.createMasterNode(*data)
-	if isExist || err != nil {
-		fmt.Println("master is not exist")
-		err = this.createNormalNode(*data)
+	pathPrefix := this.joinPathPrefix()
+	err = this.createParents(*pathPrefix)
+	if err != nil {
+		fmt.Println("[ERROR] create parents error")
+		return err
+	}
+	err = this.createMasterNode(data, pathPrefix)
+	if err != nil {
+		// master create error -> create normal node
+		fmt.Println("[INFO] master node create error -> create normal node")
+		err = this.createNormalNode(data, pathPrefix)
+		if err == nil {
+			fmt.Println("[SUCCESS] Identify: normal node")
+		}
+	} else {
+		// master create success
+		fmt.Println("[SUCCESS] Identify: master node")
 	}
 	return err
 }
 
 func (this *CZkAdapter) createParents(root string) error {
 	this._createParents(root)
-	this.createNode(root, 0, nil, false)
+	this.createRootNode(root)
 	return nil
 }
 
@@ -143,45 +156,40 @@ func (this *CZkAdapter) _createParents(root string) error {
 		return nil
 	} else {
 		this._createParents(parent)
-		this.createNode(parent, 0, nil, false)
+		this.createRootNode(parent)
 	}
 	return nil
 }
 
-func (this *CZkAdapter) createNode(path string, flag int32, payload *string, isListen bool) (exist bool, e error) {
-	// return -> exist :  before create node is exist
-	node := strings.Join([]string{"/", path}, "")
-	isExist, _, err := this.m_conn.Exists(node)
+func (this *CZkAdapter) createRootNode(path string) error {
+	// node := strings.Join([]string{"/", path}, "")
+	if path == "" {
+		return nil
+	}
+	isExist, _, err := this.m_conn.Exists(path)
 	if err != nil {
-		fmt.Println("judge node is exist error", node)
-		return false, err
+		fmt.Println("[ERROR] judge path is exist error", path)
+		return err
 	}
 	if isExist {
-		fmt.Println("node already exist: ", node)
-		return true, nil
+		fmt.Println("[INFO] path already exist: ", path)
+		return nil
 	}
-	fmt.Println("create node: ", node, isExist)
+	fmt.Println("create path: ", path, isExist)
+	_, err = this.m_conn.Create(path, nil, 0, zk.WorldACL(zk.PermAll))
+	if err == nil {
+		fmt.Println("create path success: ", path)
+	}
+	return err
+}
+
+func (this *CZkAdapter) createNode(path string, flag int32, payload *string) (afterCreateNode string, e error) {
+	// node := strings.Join([]string{"/", path}, "")
 	var data string = ""
 	if payload != nil {
 		data = *payload
 	}
-	afterCreateNode, err := this.m_conn.Create(node, []byte(data), flag, zk.WorldACL(zk.PermAll))
-	if err == nil {
-		fmt.Println("create node success: ", node)
-	}
-	// listen
-	if isListen {
-		_, parent := this.getParentNode(afterCreateNode)
-		masterNode := strings.Join([]string{parent, master}, "/")
-		fmt.Println("listen node: ", masterNode)
-		_, _, ech, err := this.m_conn.ExistsW(masterNode)
-		if err != nil {
-			fmt.Println("listen error")
-			return false, err
-		}
-		go this.checkNodeDelete(afterCreateNode, ech)
-	}
-	return false, err
+	return this.m_conn.Create(path, []byte(data), flag, zk.WorldACL(zk.PermAll))
 }
 
 func (this *CZkAdapter) checkNodeDelete(selfNode string, ech <-chan zk.Event) {
@@ -191,17 +199,33 @@ func (this *CZkAdapter) checkNodeDelete(selfNode string, ech <-chan zk.Event) {
 			path := event.Path
 			li := strings.Split(path, "/")
 			length := len(li)
-			fmt.Println(path)
 			if event.Type == zk.EventNodeDeleted && li[length-1] == master {
-				fmt.Println("master deleted")
-				err := this.m_conn.Delete(selfNode, 0)
+				fmt.Println("[INFO] master node is deleted")
+				data, err := this.joinNodeData()
 				if err != nil {
-					fmt.Println("delete self node error: ", err)
+					fmt.Println("[ERROR] join Node Data error")
 					return
 				}
-				err = this.createMasterAndNormalNode()
+				pathPrefix := this.joinPathPrefix()
+				err = this.createParents(*pathPrefix)
 				if err != nil {
-					fmt.Println("checkNodeDelete error: createMasterAndNormalNode error: ", err)
+					fmt.Println("[ERROR] create parents error")
+					return
+				}
+				err = this.createMasterNode(data, pathPrefix)
+				if err == nil {
+					// master create success -> delete self
+					fmt.Println("[INFO] master node create success -> delete self node")
+					err = this.m_conn.Delete(selfNode, 0)
+					if err != nil {
+						fmt.Println("[ERROR] delete self node error: ", err)
+						return
+					} else {
+						fmt.Println("[INFO] delete node, path: ", selfNode)
+					}
+					fmt.Println("[SUCCESS] Identify: master node")
+				} else {
+					this.listenMasterNode(&selfNode)
 				}
 				return
 			}
@@ -218,38 +242,52 @@ func (this *CZkAdapter) getParentNode(path string) (isRoot bool, parent string) 
 	return false, strings.Join(li[:length-1], "/")
 }
 
-func (this *CZkAdapter) createMasterNode(payload string) (exist bool, e error) {
-	var masterRoot string
-	var masterPath string
+func (this *CZkAdapter) joinPathPrefix() *string {
+	var path string
 	if this.m_pathPrefix != "" {
-		masterRoot = strings.Join([]string{this.m_pathPrefix, this.m_serverName}, "/")
+		path = strings.Join([]string{this.m_pathPrefix, this.m_serverName}, "/")
 	} else {
-		masterRoot = this.m_serverName
+		path = this.m_serverName
 	}
-	err := this.createParents(masterRoot)
-	if err != nil {
-		return false, err
-	}
-	masterPath = strings.Join([]string{masterRoot, master}, "/")
-	isExist, err := this.createNode(masterPath, zk.FlagEphemeral, &payload, false)
-	if err == nil {
-		fmt.Println("[SUCCESS] Identify: master node")
-	}
-	return isExist, err
+	path = strings.Join([]string{"/", path}, "")
+	return &path
 }
 
-func (this *CZkAdapter) createNormalNode(payload string) error {
-	var normalPath string
-	if this.m_pathPrefix != "" {
-		normalPath = strings.Join([]string{this.m_pathPrefix, this.m_serverName, "node"}, "/")
-	} else {
-		normalPath = strings.Join([]string{this.m_serverName, "node"}, "/")
-	}
-	_, err := this.createNode(normalPath, 3, &payload, true)
+func (this *CZkAdapter) createMasterNode(palyload *string, pathPrefix *string) error {
+	masterPath := strings.Join([]string{*pathPrefix, master}, "/")
+	afterCreateNode, err := this.createNode(masterPath, zk.FlagEphemeral, palyload)
 	if err == nil {
-		fmt.Println("[SUCCESS] Identify: normal node")
+		fmt.Println("[INFO] create node path: ", afterCreateNode)
 	}
 	return err
+}
+
+func (this *CZkAdapter) createNormalNode(palyload *string, pathPrefix *string) error {
+	normalPath := strings.Join([]string{*pathPrefix, "node"}, "/")
+	afterCreateNode, err := this.createNode(normalPath, 3, palyload)
+	if err != nil {
+		fmt.Println("[ERROR] create normal node error, path: ", afterCreateNode)
+		return err
+	} else {
+		fmt.Println("[INFO] create normale node success, path: ", afterCreateNode)
+	}
+	err = this.listenMasterNode(&afterCreateNode)
+	if err != nil {
+		fmt.Println("[ERROR] listen master node error")
+	}
+	return err
+}
+
+func (this *CZkAdapter) listenMasterNode(nodePath *string) error {
+	_, parent := this.getParentNode(*nodePath)
+	masterNode := strings.Join([]string{parent, master}, "/")
+	_, _, ech, err := this.m_conn.ExistsW(masterNode)
+	if err != nil {
+		fmt.Println("[ERROR] listen master node error")
+		return err
+	}
+	go this.checkNodeDelete(*nodePath, ech)
+	return nil
 }
 
 func (*CZkAdapter) joinHost(ip string, port int) string {
