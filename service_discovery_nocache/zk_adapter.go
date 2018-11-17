@@ -7,23 +7,20 @@ import (
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
 	"strings"
-	"sync"
 	"time"
 )
 
 var _ = fmt.Println
-
-var (
-	master string = "master"
-)
+var _ = errors.New("")
 
 type CZkAdapter struct {
+	m_zkCommon         proto.CZkCommon
 	m_pathPrefix       string
 	m_serverName       string
 	m_serverUniqueCode string
 	m_nodePayload      string
 	m_connTimeout      int
-	m_connMap          sync.Map
+	m_callback         func(zk.Event)
 	m_conn             *zk.Conn
 }
 
@@ -32,23 +29,49 @@ type CNodeJson struct {
 	NodePayload      string `json:"nodepayload"`
 }
 
-func (this *CZkAdapter) init(conns *[]CConnectProperty, serverName string, serverUniqueCode string, payload string, connTimeout int, pathPrefix string) error {
+func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, serverName string, serverUniqueCode string, payload string, connTimeout int, pathPrefix string) error {
 	this.m_serverName = serverName
 	this.m_serverUniqueCode = serverUniqueCode
 	this.m_nodePayload = payload
 	this.m_connTimeout = connTimeout
 	this.m_pathPrefix = pathPrefix
 	for _, conn := range *conns {
-		this.AddConnProperty(&conn)
+		this.m_zkCommon.AddConnProperty(&conn)
+	}
+	this.m_callback = func(event zk.Event) {
+		if event.State == zk.StateDisconnected {
+			this.m_conn.Close()
+			this.Connect()
+		}
+		/*
+			if event.State == zk.StateConnected {
+				fmt.Println("callback", event.State)
+				go this.createMasterAndNormalNode()
+			}
+		*/
 	}
 	return nil
 }
 
+func (this *CZkAdapter) AddConnProperty(conn *proto.CConnectProperty) error {
+	return this.m_zkCommon.AddConnProperty(conn)
+}
+
+func (this *CZkAdapter) UpdateConnProperty(conn *proto.CConnectProperty) error {
+	return this.m_zkCommon.UpdateConnProperty(conn)
+}
+
+func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
+	return this.m_zkCommon.DeleteConnProperty(serviceId)
+}
+
 func (this *CZkAdapter) Connect() error {
-	hosts := proto.ToHosts(&this.m_connMap)
+	option := zk.WithEventCallback(this.m_callback)
+	hosts := this.m_zkCommon.ToHosts()
 	var connChan <-chan zk.Event
 	var err error = nil
-	this.m_conn, connChan, err = zk.Connect(*hosts, time.Second)
+	this.m_conn, connChan, err = zk.Connect(*hosts, time.Second, option)
+	// this.m_conn, _, err = zk.Connect(*hosts, time.Second, option)
 	if err != nil {
 		fmt.Println("connect zookeeper server error")
 		return err
@@ -66,27 +89,7 @@ end:
 			return errors.New("[Error] connect timeout")
 		}
 	}
-	// connect success
 	return this.createMasterAndNormalNode()
-}
-
-func (this *CZkAdapter) AddConnProperty(conn *CConnectProperty) error {
-	info := proto.CConnInfo{}
-	info.Host = *proto.JoinHost(conn.ServerHost, conn.ServerPort)
-	this.m_connMap.Store(conn.ServiceId, info)
-	return nil
-}
-
-func (this *CZkAdapter) UpdateConnProperty(conn *CConnectProperty) error {
-	info := proto.CConnInfo{}
-	info.Host = *proto.JoinHost(conn.ServerHost, conn.ServerPort)
-	this.m_connMap.Store(conn.ServiceId, info)
-	return nil
-}
-
-func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
-	this.m_connMap.Delete(serviceId)
-	return nil
 }
 
 func (this *CZkAdapter) SetServerUniqueCode(uniqueCode string) {
@@ -119,7 +122,7 @@ func (this *CZkAdapter) createMasterAndNormalNode() error {
 		fmt.Println("[ERROR] join Node Data error")
 		return err
 	}
-	pathPrefix := proto.JoinPathPrefix(&this.m_pathPrefix, &this.m_serverName)
+	pathPrefix := this.m_zkCommon.JoinPathPrefix(&this.m_pathPrefix, &this.m_serverName)
 	err = this.createParents(*pathPrefix)
 	if err != nil {
 		fmt.Println("[ERROR] create parents error")
@@ -147,7 +150,7 @@ func (this *CZkAdapter) createParents(root string) error {
 }
 
 func (this *CZkAdapter) _createParents(root string) error {
-	isRoot, parent := proto.GetParentNode(root)
+	isRoot, parent := this.m_zkCommon.GetParentNode(root)
 	if isRoot == true {
 		return nil
 	} else {
@@ -192,17 +195,18 @@ func (this *CZkAdapter) checkNodeDelete(selfNode string, ech <-chan zk.Event) {
 	for {
 		select {
 		case event := <-ech:
+			fmt.Println("[INFO] check master is deleted")
 			path := event.Path
 			li := strings.Split(path, "/")
 			length := len(li)
-			if event.Type == zk.EventNodeDeleted && li[length-1] == master {
+			if event.Type == zk.EventNodeDeleted && li[length-1] == proto.MasterNode {
 				fmt.Println("[INFO] master node is deleted")
 				data, err := this.joinNodeData()
 				if err != nil {
 					fmt.Println("[ERROR] join Node Data error")
 					return
 				}
-				pathPrefix := proto.JoinPathPrefix(&this.m_pathPrefix, &this.m_serverName)
+				pathPrefix := this.m_zkCommon.JoinPathPrefix(&this.m_pathPrefix, &this.m_serverName)
 				err = this.createParents(*pathPrefix)
 				if err != nil {
 					fmt.Println("[ERROR] create parents error")
@@ -230,7 +234,7 @@ func (this *CZkAdapter) checkNodeDelete(selfNode string, ech <-chan zk.Event) {
 }
 
 func (this *CZkAdapter) createMasterNode(palyload *string, pathPrefix *string) error {
-	masterPath := strings.Join([]string{*pathPrefix, master}, "/")
+	masterPath := strings.Join([]string{*pathPrefix, proto.MasterNode}, "/")
 	afterCreateNode, err := this.createNode(masterPath, zk.FlagEphemeral, palyload)
 	if err == nil {
 		fmt.Println("[INFO] create node path: ", afterCreateNode)
@@ -239,7 +243,7 @@ func (this *CZkAdapter) createMasterNode(palyload *string, pathPrefix *string) e
 }
 
 func (this *CZkAdapter) createNormalNode(palyload *string, pathPrefix *string) error {
-	normalPath := strings.Join([]string{*pathPrefix, "node"}, "/")
+	normalPath := strings.Join([]string{*pathPrefix, proto.NormalNode}, "/")
 	afterCreateNode, err := this.createNode(normalPath, 3, palyload)
 	if err != nil {
 		fmt.Println("[ERROR] create normal node error, path: ", afterCreateNode)
@@ -255,8 +259,8 @@ func (this *CZkAdapter) createNormalNode(palyload *string, pathPrefix *string) e
 }
 
 func (this *CZkAdapter) listenMasterNode(nodePath *string) error {
-	_, parent := proto.GetParentNode(*nodePath)
-	masterNode := strings.Join([]string{parent, master}, "/")
+	_, parent := this.m_zkCommon.GetParentNode(*nodePath)
+	masterNode := strings.Join([]string{parent, proto.MasterNode}, "/")
 	_, _, ech, err := this.m_conn.ExistsW(masterNode)
 	if err != nil {
 		fmt.Println("[ERROR] listen master node error")

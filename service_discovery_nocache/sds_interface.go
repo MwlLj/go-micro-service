@@ -1,6 +1,8 @@
 package service_discovery_nocache
 
-import ()
+import (
+	proto "../common_proto"
+)
 
 var (
 	ServerModeZookeeper = "zookeeper"
@@ -14,13 +16,7 @@ type CInitProperty struct {
 	ServerUniqueCode string
 	NodePayload      string
 	ConnTimeoutS     int
-	Conns            []CConnectProperty
-}
-
-type CConnectProperty struct {
-	ServerHost string
-	ServerPort int
-	ServiceId  string
+	Conns            []proto.CConnectProperty
 }
 
 type CServiceDiscoveryNocache interface {
@@ -28,10 +24,10 @@ type CServiceDiscoveryNocache interface {
 	SetServerUniqueCode(uniqueCode string)
 	SetPayload(payload string)
 	GetMasterPayload() (*string, error)
-	AddConnProperty(conn *CConnectProperty) error
-	UpdateConnProperty(conn *CConnectProperty) error
+	AddConnProperty(conn *proto.CConnectProperty) error
+	UpdateConnProperty(conn *proto.CConnectProperty) error
 	DeleteConnProperty(serviceId *string) error
-	init(conns *[]CConnectProperty, serverName string, serverUniqueCode string, payload string, connTimeout int, pathPrefix string) error
+	init(conns *[]proto.CConnectProperty, serverName string, serverUniqueCode string, payload string, connTimeout int, pathPrefix string) error
 }
 
 func New(property *CInitProperty) CServiceDiscoveryNocache {

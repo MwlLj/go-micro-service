@@ -6,11 +6,24 @@ import (
 	"sync"
 )
 
+const MasterNode string = "master"
+const NormalNode string = "normal"
+
 type CConnInfo struct {
 	Host string
 }
 
-func JoinPathPrefix(prefix *string, serverName *string) *string {
+type CConnectProperty struct {
+	ServerHost string
+	ServerPort int
+	ServiceId  string
+}
+
+type CZkCommon struct {
+	m_connMap sync.Map
+}
+
+func (*CZkCommon) JoinPathPrefix(prefix *string, serverName *string) *string {
 	var path string
 	if *prefix != "" {
 		path = strings.Join([]string{*prefix, *serverName}, "/")
@@ -21,7 +34,7 @@ func JoinPathPrefix(prefix *string, serverName *string) *string {
 	return &path
 }
 
-func GetParentNode(path string) (isRoot bool, parent string) {
+func (*CZkCommon) GetParentNode(path string) (isRoot bool, parent string) {
 	li := strings.Split(path, "/")
 	length := len(li)
 	if length == 1 {
@@ -30,18 +43,37 @@ func GetParentNode(path string) (isRoot bool, parent string) {
 	return false, strings.Join(li[:length-1], "/")
 }
 
-func JoinHost(ip string, port int) *string {
+func (*CZkCommon) JoinHost(ip string, port int) *string {
 	host := strings.Join([]string{ip, strconv.FormatInt(int64(port), 10)}, ":")
 	return &host
 }
 
-func ToHosts(connMap *sync.Map) *[]string {
+func (this *CZkCommon) ToHosts() *[]string {
 	var hosts []string
 	f := func(k, v interface{}) bool {
 		info := v.(CConnInfo)
 		hosts = append(hosts, info.Host)
 		return true
 	}
-	connMap.Range(f)
+	this.m_connMap.Range(f)
 	return &hosts
+}
+
+func (this *CZkCommon) AddConnProperty(conn *CConnectProperty) error {
+	info := CConnInfo{}
+	info.Host = *this.JoinHost(conn.ServerHost, conn.ServerPort)
+	this.m_connMap.Store(conn.ServiceId, info)
+	return nil
+}
+
+func (this *CZkCommon) UpdateConnProperty(conn *CConnectProperty) error {
+	info := CConnInfo{}
+	info.Host = *this.JoinHost(conn.ServerHost, conn.ServerPort)
+	this.m_connMap.Store(conn.ServiceId, info)
+	return nil
+}
+
+func (this *CZkCommon) DeleteConnProperty(serviceId *string) error {
+	this.m_connMap.Delete(serviceId)
+	return nil
 }
