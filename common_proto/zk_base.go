@@ -39,7 +39,9 @@ func (this *CZkBase) ZkBaseInit(conns *[]CConnectProperty, connTimeout int, base
 		if event.State == zk.StateDisconnected {
 			this.m_isConnected = false
 		}
-		this.m_baseInterface.EventCallback(event)
+		if this.m_baseInterface != nil {
+			this.m_baseInterface.EventCallback(event)
+		}
 	}
 	go func() {
 		for {
