@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+var _ = fmt.Println
+
 func main() {
 	var conns []proto.CConnectProperty
 	conns = append(conns, proto.CConnectProperty{ServerHost: "127.0.0.1", ServerPort: 2182, ServiceId: "server_1"})
@@ -18,11 +20,7 @@ func main() {
 		NodePayload:      `{"ip":"192.168.9.15","port":50000}`,
 		Conns:            conns,
 		ConnTimeoutS:     10})
-	err := sds.Connect()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	var _ = sds
 	for {
 		time.Sleep(100 * time.Millisecond)
 	}

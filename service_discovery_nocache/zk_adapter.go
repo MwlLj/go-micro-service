@@ -20,6 +20,7 @@ type CZkAdapter struct {
 	m_serverUniqueCode string
 	m_nodePayload      string
 	m_connTimeout      int
+	m_isConnected      bool
 	m_callback         func(zk.Event)
 	m_conn             *zk.Conn
 }
@@ -35,21 +36,30 @@ func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, serverName string,
 	this.m_nodePayload = payload
 	this.m_connTimeout = connTimeout
 	this.m_pathPrefix = pathPrefix
+	this.m_isConnected = false
 	for _, conn := range *conns {
 		this.m_zkCommon.AddConnProperty(&conn)
 	}
 	this.m_callback = func(event zk.Event) {
 		if event.State == zk.StateDisconnected {
-			this.m_conn.Close()
-			this.Connect()
+			this.m_isConnected = false
 		}
-		/*
-			if event.State == zk.StateConnected {
-				fmt.Println("callback", event.State)
-				go this.createMasterAndNormalNode()
-			}
-		*/
 	}
+	go func() {
+		for {
+			if this.m_isConnected == false {
+				if this.m_conn != nil {
+					this.m_conn.Close()
+				}
+				err := this.connect()
+				if err == nil {
+					this.m_isConnected = true
+				}
+			} else {
+				time.Sleep(3 * time.Second)
+			}
+		}
+	}()
 	return nil
 }
 
@@ -65,7 +75,7 @@ func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
 	return this.m_zkCommon.DeleteConnProperty(serviceId)
 }
 
-func (this *CZkAdapter) Connect() error {
+func (this *CZkAdapter) connect() error {
 	option := zk.WithEventCallback(this.m_callback)
 	hosts := this.m_zkCommon.ToHosts()
 	var connChan <-chan zk.Event
@@ -73,7 +83,7 @@ func (this *CZkAdapter) Connect() error {
 	this.m_conn, connChan, err = zk.Connect(*hosts, time.Second, option)
 	// this.m_conn, _, err = zk.Connect(*hosts, time.Second, option)
 	if err != nil {
-		fmt.Println("connect zookeeper server error")
+		fmt.Println("[ERROR] connect zookeeper server error")
 		return err
 	}
 	t := time.After(time.Second * time.Duration(this.m_connTimeout))
