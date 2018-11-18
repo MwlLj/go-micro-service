@@ -5,7 +5,8 @@ import (
 )
 
 var (
-	ServerModeZookeeper = "zookeeper"
+	ServerModeNocacheZookeeper   = "nocache_zookeeper"
+	ServerModeWithcacheZookeeper = "withcache_zookeeper"
 )
 
 type ICallback interface {
@@ -15,21 +16,25 @@ type ICallback interface {
 
 type ILoadBlance interface {
 	SetCallback(callback ICallback, userData interface{})
-	GetMasterNode(serverName string) *string
-	RoundRobin(serverName string) *string
-	WeightRoundRobin(serverName string) *string
-	Random(serverName string) *string
-	WeightRandom(serverName string) *string
-	IpHash(serverName string) *string
-	UrlHash(serverName string) *string
-	LeastConnections(serverName string) *string
-	init(conns *[]proto.CConnectProperty, connTimeoutS int) error
+	GetMasterNode(serverName string) (*proto.CNodeData, error)
+	RoundRobin(serverName string) (*proto.CNodeData, error)
+	WeightRoundRobin(serverName string) (*proto.CNodeData, error)
+	Random(serverName string) (*proto.CNodeData, error)
+	WeightRandom(serverName string) (*proto.CNodeData, error)
+	IpHash(serverName string) (*proto.CNodeData, error)
+	UrlHash(serverName string) (*proto.CNodeData, error)
+	LeastConnections(serverName string) (*proto.CNodeData, error)
+	init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) error
 }
 
-func New(serverMode string, conns *[]proto.CConnectProperty, connTimeoutS int) ILoadBlance {
-	if serverMode == ServerModeZookeeper {
-		adapter := &CZkAdapter{}
-		adapter.init(conns, connTimeoutS)
+func New(serverMode string, conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) ILoadBlance {
+	if serverMode == ServerModeNocacheZookeeper {
+		adapter := &CNocacheZkAdapter{}
+		adapter.init(conns, pathPrefix, connTimeoutS)
+		return adapter
+	} else if serverMode == ServerModeWithcacheZookeeper {
+		adapter := &CWithcacheZkAdapter{}
+		adapter.init(conns, pathPrefix, connTimeoutS)
 		return adapter
 	}
 	return nil

@@ -108,3 +108,7 @@ func (this *CZkBase) JoinPathPrefix(prefix *string, serverName *string) *string 
 func (this *CZkBase) GetParentNode(path string) (isRoot bool, parent string) {
 	return this.m_zkCommon.GetParentNode(path)
 }
+
+func (this *CZkBase) SplitePath(path string) (prefix, serverName, nodeName *string, e error) {
+	return this.m_zkCommon.SplitePath(path)
+}
