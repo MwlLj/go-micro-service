@@ -1,6 +1,7 @@
 package common_proto
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"sync"
@@ -76,4 +77,16 @@ func (this *CZkCommon) UpdateConnProperty(conn *CConnectProperty) error {
 func (this *CZkCommon) DeleteConnProperty(serviceId *string) error {
 	this.m_connMap.Delete(serviceId)
 	return nil
+}
+
+func (this *CZkCommon) SplitePath(path string) (prefix, serverName, nodeName *string, e error) {
+	paths := strings.Split(path, "/")
+	length := len(paths)
+	if length < 4 {
+		return nil, nil, nil, errors.New("[ERROR] path rule is error")
+	}
+	*prefix = strings.Join(paths[1:length-2], "/")
+	*serverName = paths[length-2]
+	*nodeName = paths[length-1]
+	return prefix, serverName, nodeName, nil
 }

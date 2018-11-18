@@ -11,6 +11,7 @@ var _ = fmt.Println
 
 type IZkBase interface {
 	AfterConnect(conn *zk.Conn) error
+	EventCallback(event zk.Event)
 }
 
 type CZkBase struct {
@@ -30,9 +31,15 @@ func (this *CZkBase) ZkBaseInit(conns *[]CConnectProperty, connTimeout int, base
 	this.m_connTimeout = connTimeout
 	this.m_isConnected = false
 	this.m_callback = func(event zk.Event) {
+		fmt.Println("[INFO] watch event",
+			"path:", event.Path,
+			"state:", event.State,
+			"type:", event.Type,
+			"server:", event.Server)
 		if event.State == zk.StateDisconnected {
 			this.m_isConnected = false
 		}
+		this.m_baseInterface.EventCallback(event)
 	}
 	go func() {
 		for {

@@ -52,6 +52,9 @@ func (this *CZkAdapter) AfterConnect(conn *zk.Conn) error {
 	return this.createMasterAndNormalNode()
 }
 
+func (this *CZkAdapter) EventCallback(event zk.Event) {
+}
+
 func (this *CZkAdapter) SetServerUniqueCode(uniqueCode string) {
 	this.m_serverUniqueCode = uniqueCode
 }
