@@ -14,18 +14,19 @@ type IZkBase interface {
 }
 
 type CZkBase struct {
-	m_zkCommon    CZkCommon
-	m_connTimeout int
-	m_isConnected bool
-	m_callback    func(zk.Event)
-	m_conn        *zk.Conn
+	m_baseInterface IZkBase
+	m_zkCommon      CZkCommon
+	m_connTimeout   int
+	m_isConnected   bool
+	m_callback      func(zk.Event)
+	m_conn          *zk.Conn
 }
 
-func (this *CZkBase) GetZkConn() *zk.Conn {
-	return this.m_conn
-}
-
-func (this *CZkBase) Init(connTimeout int) {
+func (this *CZkBase) ZkBaseInit(conns *[]CConnectProperty, connTimeout int, baseInterface IZkBase) {
+	this.m_baseInterface = baseInterface
+	for _, conn := range *conns {
+		this.m_zkCommon.AddConnProperty(&conn)
+	}
 	this.m_connTimeout = connTimeout
 	this.m_isConnected = false
 	this.m_callback = func(event zk.Event) {
@@ -42,16 +43,14 @@ func (this *CZkBase) Init(connTimeout int) {
 				err := this.connect()
 				if err == nil {
 					this.m_isConnected = true
+				} else {
+					time.Sleep(1 * time.Second)
 				}
 			} else {
 				time.Sleep(3 * time.Second)
 			}
 		}
 	}()
-}
-
-func (this *CZkBase) AfterConnect(conn *zk.Conn) error {
-	return nil
 }
 
 func (this *CZkBase) connect() error {
@@ -78,5 +77,25 @@ end:
 			return errors.New("[Error] connect timeout")
 		}
 	}
-	return this.AfterConnect(this.m_conn)
+	return this.m_baseInterface.AfterConnect(this.m_conn)
+}
+
+func (this *CZkBase) AddConnProperty(conn *CConnectProperty) error {
+	return this.m_zkCommon.AddConnProperty(conn)
+}
+
+func (this *CZkBase) UpdateConnProperty(conn *CConnectProperty) error {
+	return this.m_zkCommon.UpdateConnProperty(conn)
+}
+
+func (this *CZkBase) DeleteConnProperty(serviceId *string) error {
+	return this.m_zkCommon.DeleteConnProperty(serviceId)
+}
+
+func (this *CZkBase) JoinPathPrefix(prefix *string, serverName *string) *string {
+	return this.m_zkCommon.JoinPathPrefix(prefix, serverName)
+}
+
+func (this *CZkBase) GetParentNode(path string) (isRoot bool, parent string) {
+	return this.m_zkCommon.GetParentNode(path)
 }
