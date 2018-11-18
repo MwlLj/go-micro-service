@@ -14,24 +14,17 @@ var _ = errors.New("")
 
 type CZkAdapter struct {
 	proto.CZkBase
-	m_pathPrefix       string
-	m_serverName       string
-	m_serverUniqueCode string
-	m_nodePayload      string
-	m_conn             *zk.Conn
+	m_pathPrefix string
+	m_serverName string
+	m_nodeData   proto.CNodeData
+	m_conn       *zk.Conn
 }
 
-type CNodeJson struct {
-	ServerUniqueCode string `json:"serveruniquecode"`
-	NodePayload      string `json:"nodepayload"`
-}
-
-func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, serverName string, serverUniqueCode string, payload string, connTimeout int, pathPrefix string) error {
+func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, serverName string, nodeData *proto.CNodeData, connTimeoutS int, pathPrefix string) error {
 	this.m_serverName = serverName
-	this.m_serverUniqueCode = serverUniqueCode
-	this.m_nodePayload = payload
+	this.m_nodeData = *nodeData
 	this.m_pathPrefix = pathPrefix
-	this.ZkBaseInit(conns, connTimeout, this)
+	this.ZkBaseInit(conns, connTimeoutS, this)
 	return nil
 }
 
@@ -55,12 +48,8 @@ func (this *CZkAdapter) AfterConnect(conn *zk.Conn) error {
 func (this *CZkAdapter) EventCallback(event zk.Event) {
 }
 
-func (this *CZkAdapter) SetServerUniqueCode(uniqueCode string) {
-	this.m_serverUniqueCode = uniqueCode
-}
-
-func (this *CZkAdapter) SetPayload(payload string) {
-	this.m_nodePayload = payload
+func (this *CZkAdapter) SetNodeData(data *proto.CNodeData) {
+	this.m_nodeData = *data
 }
 
 func (this *CZkAdapter) GetMasterPayload() (*string, error) {
@@ -68,15 +57,12 @@ func (this *CZkAdapter) GetMasterPayload() (*string, error) {
 }
 
 func (this *CZkAdapter) joinNodeData() (*string, error) {
-	nodeJson := CNodeJson{
-		ServerUniqueCode: this.m_serverUniqueCode,
-		NodePayload:      this.m_nodePayload}
-	b, err := json.Marshal(&nodeJson)
+	b, err := json.Marshal(&this.m_nodeData)
 	if err != nil {
 		return nil, err
 	}
-	data := string(b)
-	return &data, nil
+	d := string(b)
+	return &d, nil
 }
 
 func (this *CZkAdapter) createMasterAndNormalNode() error {

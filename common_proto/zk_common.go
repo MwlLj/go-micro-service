@@ -14,6 +14,12 @@ type CConnInfo struct {
 	Host string
 }
 
+type CNodeData struct {
+	ServerIp         string `json:"serverip"`
+	ServerPort       int    `json:"serverport"`
+	ServerUniqueCode string `json:"serveruniquecode"`
+}
+
 type CConnectProperty struct {
 	ServerHost string
 	ServerPort int
