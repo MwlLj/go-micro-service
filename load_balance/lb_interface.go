@@ -8,7 +8,13 @@ var (
 	ServerModeZookeeper = "zookeeper"
 )
 
+type ICallback interface {
+	MasterNodeChange(data *proto.CNodeData, userData interface{})
+	NormalNodeChange(data *proto.CNodeData, userData interface{})
+}
+
 type ILoadBlance interface {
+	SetCallback(callback ICallback, userData interface{})
 	GetMasterNode(serverName string) *string
 	RoundRobin(serverName string) *string
 	WeightRoundRobin(serverName string) *string

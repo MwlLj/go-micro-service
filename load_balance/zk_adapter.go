@@ -16,12 +16,19 @@ var _ = json.Unmarshal
 
 type CZkAdapter struct {
 	proto.CZkBase
-	m_conn *zk.Conn
+	m_callback         ICallback
+	m_callbackUserData interface{}
+	m_conn             *zk.Conn
 }
 
 func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, connTimeoutS int) error {
 	this.ZkBaseInit(conns, connTimeoutS, this)
 	return nil
+}
+
+func (this *CZkAdapter) SetCallback(callback ICallback, userData interface{}) {
+	this.m_callback = callback
+	this.m_callbackUserData = userData
 }
 
 func (this *CZkAdapter) AddConnProperty(conn *proto.CConnectProperty) error {
