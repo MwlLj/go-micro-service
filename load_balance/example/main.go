@@ -24,11 +24,13 @@ func main() {
 	} else {
 		fmt.Println(data.ServerIp, data.ServerPort, data.ServerUniqueCode)
 	}
-	data, err = algorithm.Get("testserver")
-	if err != nil {
-		fmt.Println("[ERROR] get normal node error, ", err)
-	} else {
-		fmt.Println(data.ServerIp, data.ServerPort, data.ServerUniqueCode)
+	for i := 0; i < 10; i++ {
+		data, err = algorithm.Get("testserver")
+		if err != nil {
+			fmt.Println("[ERROR] get normal node error, ", err)
+		} else {
+			fmt.Println(data.ServerIp, data.ServerPort, data.ServerUniqueCode)
+		}
 	}
 	var _ = bls
 	for {

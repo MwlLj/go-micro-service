@@ -7,6 +7,7 @@ import (
 )
 
 var _ = fmt.Println
+var _ = errors.New
 
 type CRoundRobin struct {
 	m_loadBlance ILoadBlance
@@ -15,41 +16,22 @@ type CRoundRobin struct {
 }
 
 func (this *CRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
-	items, err := this.m_loadBlance.findServerData(serverName)
+	item, err := this.m_loadBlance.findServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
 		return nil, err
 	}
-	length := len(*items)
+	length := len(*item.normalNodes)
 	if length != this.m_nodeLength || this.m_nodeLength == 0 {
 		this.m_nodeLength = length
 		this.m_nodeIndex = 0
 	}
-	item, isFind := this.findNormalNode(items)
-	if isFind == false {
-		return nil, errors.New("not find")
-	}
+	data := (*item.normalNodes)[this.m_nodeIndex]
 	this.m_nodeIndex += 1
 	if this.m_nodeIndex > this.m_nodeLength-1 {
 		this.m_nodeIndex = 0
 	}
-	return &item.nodeData, nil
-}
-
-func (this *CRoundRobin) findNormalNode(items *[]CDataItem) (*CDataItem, bool) {
-	if this.m_nodeIndex > this.m_nodeLength-1 {
-		return nil, false
-	}
-	item := (*items)[this.m_nodeIndex]
-	if item.nodeType != proto.MasterNode {
-		return &item, true
-	} else {
-		this.m_nodeIndex += 1
-		if this.m_nodeIndex > this.m_nodeLength-1 {
-			return nil, false
-		}
-		return this.findNormalNode(items)
-	}
+	return &data, nil
 }
 
 type CWeightRoundRobin struct {

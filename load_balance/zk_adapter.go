@@ -85,26 +85,18 @@ func (this *CZkAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgo
 }
 
 func (this *CZkAdapter) GetMasterNode(serverName string) (*proto.CNodeData, error) {
-	items, err := this.findServerData(serverName)
+	item, err := this.findServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] find serverdata error")
 		return nil, err
 	}
-	var masterNode proto.CNodeData
-	isFind := false
-	for _, item := range *items {
-		if item.nodeType == proto.MasterNode {
-			isFind = true
-			masterNode = item.nodeData
-		}
-	}
-	if isFind == false {
+	if item.masterNode == nil {
 		return nil, errors.New("is not exist")
 	}
-	return &masterNode, nil
+	return item.masterNode, nil
 }
 
-func (this *CZkAdapter) findServerData(serverName string) (*[]CDataItem, error) {
+func (this *CZkAdapter) findServerData(serverName string) (*CDataItem, error) {
 	var resultValue interface{} = nil
 	f := func(k, v interface{}) bool {
 		key := k.(string)
@@ -118,7 +110,7 @@ func (this *CZkAdapter) findServerData(serverName string) (*[]CDataItem, error) 
 	if resultValue == nil {
 		return nil, errors.New("server not found")
 	}
-	r := resultValue.([]CDataItem)
+	r := resultValue.(CDataItem)
 	return &r, nil
 }
 
@@ -144,7 +136,8 @@ func (this *CZkAdapter) syncData() error {
 			fmt.Println("[WARNING] get node error, path: ", nodeRootPath)
 			continue
 		}
-		var items []CDataItem
+		var masterNode proto.CNodeData
+		var normalNodes []proto.CNodeData
 		for _, node := range nodes {
 			// fmt.Println("[DEBUG] node: ", node)
 			nodePath := strings.Join([]string{*path, server, node}, "/")
@@ -161,14 +154,13 @@ func (this *CZkAdapter) syncData() error {
 				fmt.Println("[WARNING] decoder nodedata error, node")
 				continue
 			}
-			var t string = proto.NormalNode
 			if node == proto.MasterNode {
-				t = proto.MasterNode
+				masterNode = data
+			} else {
+				normalNodes = append(normalNodes, data)
 			}
-			item := CDataItem{nodeType: t, nodeData: data}
-			items = append(items, item)
 		}
-		this.m_serverData.Store(server, items)
+		this.m_serverData.Store(server, CDataItem{masterNode: &masterNode, normalNodes: &normalNodes})
 	}
 	return nil
 }
