@@ -5,9 +5,22 @@ import (
 )
 
 var (
-	ServerModeNocacheZookeeper   = "nocache_zookeeper"
-	ServerModeWithcacheZookeeper = "withcache_zookeeper"
+	ServerModeZookeeper = "zookeeper"
 )
+
+var (
+	AlgorithmRoundRobin       = "roundrobin"
+	AlgorithmWeightRoundRobin = "weightroundrobin"
+	AlgorithmRandom           = "random"
+	AlgorithmWeightRandom     = "weightrandom"
+	AlgorithmIpHash           = "iphash"
+	AlgorithmUrlHash          = "urlhash"
+	AlgorithmLeastConnect     = "leastconnect"
+)
+
+type INormalNodeAlgorithm interface {
+	Get(serverName string) (*proto.CNodeData, error)
+}
 
 type ICallback interface {
 	MasterNodeChange(data *proto.CNodeData, userData interface{})
@@ -17,25 +30,18 @@ type ICallback interface {
 type ILoadBlance interface {
 	SetCallback(callback ICallback, userData interface{})
 	GetMasterNode(serverName string) (*proto.CNodeData, error)
-	RoundRobin(serverName string) (*proto.CNodeData, error)
-	WeightRoundRobin(serverName string) (*proto.CNodeData, error)
-	Random(serverName string) (*proto.CNodeData, error)
-	WeightRandom(serverName string) (*proto.CNodeData, error)
-	IpHash(serverName string) (*proto.CNodeData, error)
-	UrlHash(serverName string) (*proto.CNodeData, error)
-	LeastConnections(serverName string) (*proto.CNodeData, error)
-	init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) error
+	GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm
+	init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error)
 }
 
-func New(serverMode string, conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) ILoadBlance {
-	if serverMode == ServerModeNocacheZookeeper {
-		adapter := &CNocacheZkAdapter{}
-		adapter.init(conns, pathPrefix, connTimeoutS)
-		return adapter
-	} else if serverMode == ServerModeWithcacheZookeeper {
-		adapter := &CWithcacheZkAdapter{}
-		adapter.init(conns, pathPrefix, connTimeoutS)
-		return adapter
+func New(serverMode string, conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (ILoadBlance, <-chan bool) {
+	if serverMode == ServerModeZookeeper {
+		adapter := &CZkAdapter{}
+		ch, err := adapter.init(conns, pathPrefix, connTimeoutS)
+		if err != nil {
+			return nil, nil
+		}
+		return adapter, ch
 	}
-	return nil
+	return nil, nil
 }
