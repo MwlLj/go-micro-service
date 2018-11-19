@@ -2,14 +2,47 @@ package load_balance
 
 import (
 	proto "../common_proto"
+	"errors"
+	"fmt"
 )
+
+var _ = fmt.Println
 
 type CRoundRobin struct {
 	m_loadBlance ILoadBlance
+	m_nodeLength int
+	m_nodeIndex  int
 }
 
 func (this *CRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, nil
+	items, err := this.m_loadBlance.findServerData(serverName)
+	if err != nil {
+		fmt.Println("[ERROR] server not find")
+		return nil, err
+	}
+	length := len(*items)
+	if length != this.m_nodeLength {
+		this.m_nodeLength = length
+		this.m_nodeIndex = 0
+	}
+	item, isFind := this.findNormalNode(items)
+	if isFind == false {
+		return nil, errors.New("not find")
+	}
+	return &item.nodeData, nil
+}
+
+func (this *CRoundRobin) findNormalNode(items *[]CDataItem) (*CDataItem, bool) {
+	item := (*items)[this.m_nodeIndex]
+	if item.nodeType != proto.MasterNode {
+		return &item, true
+	} else {
+		this.m_nodeIndex += 1
+		if this.m_nodeIndex > this.m_nodeLength-1 {
+			return nil, false
+		}
+		return this.findNormalNode(items)
+	}
 }
 
 type CWeightRoundRobin struct {

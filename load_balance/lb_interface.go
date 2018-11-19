@@ -27,11 +27,17 @@ type ICallback interface {
 	NormalNodeChange(data *proto.CNodeData, userData interface{})
 }
 
+type CDataItem struct {
+	nodeType string
+	nodeData proto.CNodeData
+}
+
 type ILoadBlance interface {
 	SetCallback(callback ICallback, userData interface{})
 	GetMasterNode(serverName string) (*proto.CNodeData, error)
 	GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm
 	init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error)
+	findServerData(serverName string) (*[]CDataItem, error)
 }
 
 func New(serverMode string, conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (ILoadBlance, <-chan bool) {

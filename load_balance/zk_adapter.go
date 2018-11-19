@@ -26,11 +26,6 @@ type CZkAdapter struct {
 	m_connChan         chan bool
 }
 
-type CZkDataItem struct {
-	nodeType string
-	nodeData proto.CNodeData
-}
-
 func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error) {
 	this.m_pathPrefix = pathPrefix
 	this.ZkBaseInit(conns, connTimeoutS, this)
@@ -109,7 +104,7 @@ func (this *CZkAdapter) GetMasterNode(serverName string) (*proto.CNodeData, erro
 	return &masterNode, nil
 }
 
-func (this *CZkAdapter) findServerData(serverName string) (*[]CZkDataItem, error) {
+func (this *CZkAdapter) findServerData(serverName string) (*[]CDataItem, error) {
 	var resultValue interface{} = nil
 	f := func(k, v interface{}) bool {
 		key := k.(string)
@@ -123,7 +118,7 @@ func (this *CZkAdapter) findServerData(serverName string) (*[]CZkDataItem, error
 	if resultValue == nil {
 		return nil, errors.New("server not found")
 	}
-	r := resultValue.([]CZkDataItem)
+	r := resultValue.([]CDataItem)
 	return &r, nil
 }
 
@@ -149,7 +144,7 @@ func (this *CZkAdapter) syncData() error {
 			fmt.Println("[WARNING] get node error, path: ", nodeRootPath)
 			continue
 		}
-		var items []CZkDataItem
+		var items []CDataItem
 		for _, node := range nodes {
 			// fmt.Println("[DEBUG] node: ", node)
 			nodePath := strings.Join([]string{*path, server, node}, "/")
@@ -170,7 +165,7 @@ func (this *CZkAdapter) syncData() error {
 			if node == proto.MasterNode {
 				t = proto.MasterNode
 			}
-			item := CZkDataItem{nodeType: t, nodeData: data}
+			item := CDataItem{nodeType: t, nodeData: data}
 			items = append(items, item)
 		}
 		this.m_serverData.Store(server, items)
