@@ -90,39 +90,41 @@ func (this *CZkAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgo
 }
 
 func (this *CZkAdapter) GetMasterNode(serverName string) (*proto.CNodeData, error) {
-	fmt.Println(this.m_serverData)
-	path := this.JoinPathPrefix(&this.m_pathPrefix, &serverName)
-	childrens, _, err := this.m_conn.Children(*path)
+	items, err := this.findServerData(serverName)
 	if err != nil {
-		fmt.Println("[ERROR] get children error")
+		fmt.Println("[ERROR] find serverdata error")
 		return nil, err
 	}
+	var masterNode proto.CNodeData
 	isFind := false
-	var masterNode string = ""
-	for _, child := range childrens {
-		if child == proto.MasterNode {
+	for _, item := range *items {
+		if item.nodeType == proto.MasterNode {
 			isFind = true
-			childPath := strings.Join([]string{*path, child}, "/")
-			b, _, err := this.m_conn.Get(childPath)
-			if err != nil {
-				fmt.Println("[ERROR] get nodedata error, path: ", childPath)
-				return nil, err
-			}
-			masterNode = string(b)
-			break
+			masterNode = item.nodeData
 		}
 	}
 	if isFind == false {
 		return nil, errors.New("is not exist")
 	}
-	fmt.Println("[DEBUG] nodedata: ", masterNode)
-	data := proto.CNodeData{}
-	err = json.Unmarshal([]byte(masterNode), &data)
-	if err != nil {
-		fmt.Println("[ERROR] decoder masternode json error")
-		return nil, err
+	return &masterNode, nil
+}
+
+func (this *CZkAdapter) findServerData(serverName string) (*[]CZkDataItem, error) {
+	var resultValue interface{} = nil
+	f := func(k, v interface{}) bool {
+		key := k.(string)
+		if key == serverName {
+			resultValue = v
+			return false
+		}
+		return true
 	}
-	return &data, nil
+	this.m_serverData.Range(f)
+	if resultValue == nil {
+		return nil, errors.New("server not found")
+	}
+	r := resultValue.([]CZkDataItem)
+	return &r, nil
 }
 
 func (this *CZkAdapter) sync() error {
@@ -166,7 +168,7 @@ func (this *CZkAdapter) syncData() error {
 			}
 			var t string = proto.NormalNode
 			if node == proto.MasterNode {
-				t = proto.NormalNode
+				t = proto.MasterNode
 			}
 			item := CZkDataItem{nodeType: t, nodeData: data}
 			items = append(items, item)
