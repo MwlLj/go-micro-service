@@ -21,7 +21,7 @@ func (this *CRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
 		return nil, err
 	}
 	length := len(*items)
-	if length != this.m_nodeLength {
+	if length != this.m_nodeLength || this.m_nodeLength == 0 {
 		this.m_nodeLength = length
 		this.m_nodeIndex = 0
 	}
@@ -29,10 +29,17 @@ func (this *CRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
 	if isFind == false {
 		return nil, errors.New("not find")
 	}
+	this.m_nodeIndex += 1
+	if this.m_nodeIndex > this.m_nodeLength-1 {
+		this.m_nodeIndex = 0
+	}
 	return &item.nodeData, nil
 }
 
 func (this *CRoundRobin) findNormalNode(items *[]CDataItem) (*CDataItem, bool) {
+	if this.m_nodeIndex > this.m_nodeLength-1 {
+		return nil, false
+	}
 	item := (*items)[this.m_nodeIndex]
 	if item.nodeType != proto.MasterNode {
 		return &item, true
