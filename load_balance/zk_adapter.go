@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
 	"strings"
+	"sync"
+	"time"
 )
 
 var _ = fmt.Println
@@ -19,8 +21,14 @@ type CZkAdapter struct {
 	m_pathPrefix       string
 	m_callback         ICallback
 	m_callbackUserData interface{}
+	m_serverData       sync.Map
 	m_conn             *zk.Conn
 	m_connChan         chan bool
+}
+
+type CZkDataItem struct {
+	nodeType string
+	nodeData proto.CNodeData
 }
 
 func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error) {
@@ -49,6 +57,7 @@ func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
 
 func (this *CZkAdapter) AfterConnect(conn *zk.Conn) error {
 	this.m_conn = conn
+	this.syncData()
 	this.m_connChan <- true
 	close(this.m_connChan)
 	return nil
@@ -81,6 +90,7 @@ func (this *CZkAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgo
 }
 
 func (this *CZkAdapter) GetMasterNode(serverName string) (*proto.CNodeData, error) {
+	fmt.Println(this.m_serverData)
 	path := this.JoinPathPrefix(&this.m_pathPrefix, &serverName)
 	childrens, _, err := this.m_conn.Children(*path)
 	if err != nil {
@@ -113,4 +123,55 @@ func (this *CZkAdapter) GetMasterNode(serverName string) (*proto.CNodeData, erro
 		return nil, err
 	}
 	return &data, nil
+}
+
+func (this *CZkAdapter) sync() error {
+	for {
+		this.syncData()
+		time.Sleep(30 * time.Second)
+	}
+}
+
+func (this *CZkAdapter) syncData() error {
+	path := this.JoinPathPrefix(&this.m_pathPrefix, nil)
+	servers, _, err := this.m_conn.Children(*path)
+	if err != nil {
+		fmt.Println("[ERROR] get server error, path: ", *path)
+		return err
+	}
+	for _, server := range servers {
+		// fmt.Println("[DEBUG] server: ", server)
+		nodeRootPath := this.JoinPathPrefix(&this.m_pathPrefix, &server)
+		nodes, _, err := this.m_conn.Children(*nodeRootPath)
+		if err != nil {
+			fmt.Println("[WARNING] get node error, path: ", nodeRootPath)
+			continue
+		}
+		var items []CZkDataItem
+		for _, node := range nodes {
+			// fmt.Println("[DEBUG] node: ", node)
+			nodePath := strings.Join([]string{*path, server, node}, "/")
+			// fmt.Println("[DEBUG] nodePath: ", nodePath)
+			b, _, err := this.m_conn.Get(nodePath)
+			if err != nil {
+				fmt.Println("[WARNING] get nodedata error, path: ", nodePath)
+				continue
+			}
+			// fmt.Println("[DEBUG] nodeData: ", string(b))
+			data := proto.CNodeData{}
+			err = json.Unmarshal(b, &data)
+			if err != nil {
+				fmt.Println("[WARNING] decoder nodedata error, node")
+				continue
+			}
+			var t string = proto.NormalNode
+			if node == proto.MasterNode {
+				t = proto.NormalNode
+			}
+			item := CZkDataItem{nodeType: t, nodeData: data}
+			items = append(items, item)
+		}
+		this.m_serverData.Store(server, items)
+	}
+	return nil
 }

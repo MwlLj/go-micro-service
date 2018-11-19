@@ -32,10 +32,18 @@ type CZkCommon struct {
 
 func (*CZkCommon) JoinPathPrefix(prefix *string, serverName *string) *string {
 	var path string
-	if *prefix != "" {
-		path = strings.Join([]string{*prefix, *serverName}, "/")
+	if prefix != nil {
+		if serverName != nil {
+			path = strings.Join([]string{*prefix, *serverName}, "/")
+		} else {
+			path = *prefix
+		}
 	} else {
-		path = *serverName
+		if serverName != nil {
+			path = *serverName
+		} else {
+			path = ""
+		}
 	}
 	path = strings.Join([]string{"/", path}, "")
 	return &path
