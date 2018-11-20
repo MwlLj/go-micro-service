@@ -4,13 +4,16 @@ import (
 	proto "../common_proto"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"math/rand"
+	"sync"
 )
 
 var _ = fmt.Println
 var _ = errors.New
 
 type CRoundRobin struct {
+	m_mutex      sync.Mutex
 	m_loadBlance ILoadBlance
 	m_nodeLength int
 	m_nodeIndex  int
@@ -22,6 +25,7 @@ func (this *CRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
 		fmt.Println("[ERROR] server not find")
 		return nil, err
 	}
+	this.m_mutex.Lock()
 	length := len(*item.normalNodes)
 	if length != this.m_nodeLength || this.m_nodeLength == 0 {
 		this.m_nodeLength = length
@@ -32,11 +36,13 @@ func (this *CRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
 	if this.m_nodeIndex > this.m_nodeLength-1 {
 		this.m_nodeIndex = 0
 	}
+	this.m_mutex.Unlock()
 	return &data, nil
 }
 
 type CWeightRoundRobin struct {
 	m_loadBlance ILoadBlance
+	m_mutex      sync.Mutex
 	m_nodeLength int
 	m_nodeIndex  int
 	m_curWeight  int
@@ -48,6 +54,7 @@ func (this *CWeightRoundRobin) Get(serverName string) (*proto.CNodeData, error) 
 		fmt.Println("[ERROR] server not find")
 		return nil, err
 	}
+	this.m_mutex.Lock()
 	length := len(*item.normalNodes)
 	if length != this.m_nodeLength || this.m_nodeLength == 0 {
 		this.m_nodeLength = length
@@ -68,6 +75,7 @@ func (this *CWeightRoundRobin) Get(serverName string) (*proto.CNodeData, error) 
 	if this.m_nodeIndex > this.m_nodeLength-1 {
 		this.m_nodeIndex = 0
 	}
+	this.m_mutex.Unlock()
 	return &data, nil
 }
 
@@ -132,6 +140,10 @@ func (*CWeightRandom) rebuildNormalNodes(normals *[]proto.CNodeData) *[]proto.CN
 		}
 	}
 	return &nodes
+}
+
+func toHash(b []byte) uint32 {
+	return crc32.ChecksumIEEE([]byte(s))
 }
 
 type CIpHash struct {
