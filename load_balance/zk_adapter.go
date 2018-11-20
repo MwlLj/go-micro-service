@@ -55,6 +55,7 @@ func (this *CZkAdapter) AfterConnect(conn *zk.Conn) error {
 	this.syncData()
 	this.m_connChan <- true
 	close(this.m_connChan)
+	this.m_connChan = make(chan bool, 1)
 	return nil
 }
 

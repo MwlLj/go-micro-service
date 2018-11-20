@@ -4,6 +4,7 @@ import (
 	proto "../common_proto"
 	"errors"
 	"fmt"
+	"math/rand"
 )
 
 var _ = fmt.Println
@@ -70,20 +71,67 @@ func (this *CWeightRoundRobin) Get(serverName string) (*proto.CNodeData, error) 
 	return &data, nil
 }
 
+func randomInt(min int, max int) int {
+	return min + rand.Intn(max-min)
+}
+
 type CRandom struct {
 	m_loadBlance ILoadBlance
+	m_nodeLength int
 }
 
 func (this *CRandom) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, nil
+	item, err := this.m_loadBlance.findServerData(serverName)
+	if err != nil {
+		fmt.Println("[ERROR] server not find")
+		return nil, err
+	}
+	length := len(*item.normalNodes)
+	if length == 0 {
+		return nil, errors.New("[ERROR] normal node is null")
+	}
+	if length != this.m_nodeLength || this.m_nodeLength == 0 {
+		this.m_nodeLength = length
+	}
+	randomValue := randomInt(0, this.m_nodeLength)
+	data := (*item.normalNodes)[randomValue]
+	return &data, nil
 }
 
 type CWeightRandom struct {
 	m_loadBlance ILoadBlance
+	m_nodeLength int
 }
 
 func (this *CWeightRandom) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, nil
+	item, err := this.m_loadBlance.findServerData(serverName)
+	if err != nil {
+		fmt.Println("[ERROR] server not find")
+		return nil, err
+	}
+	length := len(*item.normalNodes)
+	if length == 0 {
+		return nil, errors.New("[ERROR] normal node is null")
+	}
+	if length != this.m_nodeLength || this.m_nodeLength == 0 {
+		this.m_nodeLength = length
+	}
+	nodes := this.rebuildNormalNodes(item.normalNodes)
+	rebuildLength := len(*nodes)
+	randomValue := randomInt(0, rebuildLength)
+	data := (*nodes)[randomValue]
+	return &data, nil
+}
+
+func (*CWeightRandom) rebuildNormalNodes(normals *[]proto.CNodeData) *[]proto.CNodeData {
+	var nodes []proto.CNodeData
+	for _, normal := range *normals {
+		weight := normal.Weight
+		for i := 0; i < weight; i++ {
+			nodes = append(nodes, normal)
+		}
+	}
+	return &nodes
 }
 
 type CIpHash struct {
