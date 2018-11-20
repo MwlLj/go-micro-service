@@ -16,7 +16,9 @@ func main() {
 	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmRoundRobin)
 	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmWeightRoundRobin)
 	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmRandom)
-	algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmWeightRandom)
+	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmWeightRandom)
+	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmIpHash)
+	algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmUrlHash)
 	select {
 	case <-connChan:
 		break
@@ -31,7 +33,10 @@ func main() {
 	}
 	fmt.Println("------------normal------------")
 	for i := 0; i < 20; i++ {
-		data, err = algorithm.Get("testserver")
+		// data, err = algorithm.Get("testserver", "192.168.9.2")
+		// data, err = algorithm.Get("testserver", "192.168.9.2")
+		// data, err = algorithm.Get("testserver", "/data/user")
+		data, err = algorithm.Get("testserver", "/data/video")
 		if err != nil {
 			fmt.Println("[ERROR] get normal node error, ", err)
 		} else {

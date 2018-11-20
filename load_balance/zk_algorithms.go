@@ -6,11 +6,15 @@ import (
 	"fmt"
 	"hash/crc32"
 	"math/rand"
+	"strconv"
+	"strings"
 	"sync"
 )
 
 var _ = fmt.Println
 var _ = errors.New
+var _ = strings.Join
+var _ = strconv.ParseInt
 
 type CRoundRobin struct {
 	m_mutex      sync.Mutex
@@ -19,7 +23,7 @@ type CRoundRobin struct {
 	m_nodeIndex  int
 }
 
-func (this *CRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
+func (this *CRoundRobin) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
 	item, err := this.m_loadBlance.findServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
@@ -48,7 +52,7 @@ type CWeightRoundRobin struct {
 	m_curWeight  int
 }
 
-func (this *CWeightRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
+func (this *CWeightRoundRobin) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
 	item, err := this.m_loadBlance.findServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
@@ -88,7 +92,7 @@ type CRandom struct {
 	m_nodeLength int
 }
 
-func (this *CRandom) Get(serverName string) (*proto.CNodeData, error) {
+func (this *CRandom) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
 	item, err := this.m_loadBlance.findServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
@@ -111,7 +115,7 @@ type CWeightRandom struct {
 	m_nodeLength int
 }
 
-func (this *CWeightRandom) Get(serverName string) (*proto.CNodeData, error) {
+func (this *CWeightRandom) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
 	item, err := this.m_loadBlance.findServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
@@ -142,30 +146,82 @@ func (*CWeightRandom) rebuildNormalNodes(normals *[]proto.CNodeData) *[]proto.CN
 	return &nodes
 }
 
-func toHash(b []byte) uint32 {
-	return crc32.ChecksumIEEE([]byte(s))
+func toHash(b []byte) int {
+	v := int(crc32.ChecksumIEEE(b))
+	if v >= 0 {
+		return v
+	}
+	if -v >= 0 {
+		return -v
+	}
+	// v == MinInt
+	return 0
 }
 
 type CIpHash struct {
 	m_loadBlance ILoadBlance
 }
 
-func (this *CIpHash) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, errors.New("not support")
+func (this *CIpHash) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
+	if extraData == nil {
+		return nil, errors.New("ip is null, you should give extraData ip (type: string)")
+	}
+	item, err := this.m_loadBlance.findServerData(serverName)
+	if err != nil {
+		fmt.Println("[ERROR] server not find")
+		return nil, err
+	}
+	length := len(*item.normalNodes)
+	if length == 0 {
+		return nil, errors.New("normal node is null")
+	}
+	hash := toHash([]byte(extraData.(string)))
+	index := hash % length
+	data := (*item.normalNodes)[index]
+	return &data, nil
 }
 
 type CUrlHash struct {
 	m_loadBlance ILoadBlance
 }
 
-func (this *CUrlHash) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, errors.New("not support")
+func (this *CUrlHash) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
+	if extraData == nil {
+		return nil, errors.New("url is null, you should give extraData url (type: string)")
+	}
+	item, err := this.m_loadBlance.findServerData(serverName)
+	if err != nil {
+		fmt.Println("[ERROR] server not find")
+		return nil, err
+	}
+	length := len(*item.normalNodes)
+	if length == 0 {
+		return nil, errors.New("normal node is null")
+	}
+	hash := toHash([]byte(extraData.(string)))
+	index := hash % length
+	data := (*item.normalNodes)[index]
+	return &data, nil
 }
 
 type CLeastConnections struct {
 	m_loadBlance ILoadBlance
+	m_algorithm  INormalNodeAlgorithm
+	m_connRecord sync.Map
 }
 
-func (this *CLeastConnections) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, errors.New("not support")
+func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
+	item, err := this.m_loadBlance.findServerData(serverName)
+	if err != nil {
+		fmt.Println("[ERROR] server not find")
+		return nil, err
+	}
+	length := len(*item.normalNodes)
+	if length == 0 {
+		return nil, errors.New("normal node is null")
+	}
+	return nil, nil
+}
+
+func (this *CLeastConnections) reload() {
 }

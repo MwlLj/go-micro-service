@@ -19,7 +19,7 @@ var (
 )
 
 type INormalNodeAlgorithm interface {
-	Get(serverName string) (*proto.CNodeData, error)
+	Get(serverName string, extraData interface{}) (*proto.CNodeData, error)
 }
 
 type ICallback interface {
