@@ -36,10 +36,38 @@ func (this *CRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
 
 type CWeightRoundRobin struct {
 	m_loadBlance ILoadBlance
+	m_nodeLength int
+	m_nodeIndex  int
+	m_curWeight  int
 }
 
 func (this *CWeightRoundRobin) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, nil
+	item, err := this.m_loadBlance.findServerData(serverName)
+	if err != nil {
+		fmt.Println("[ERROR] server not find")
+		return nil, err
+	}
+	length := len(*item.normalNodes)
+	if length != this.m_nodeLength || this.m_nodeLength == 0 {
+		this.m_nodeLength = length
+		this.m_nodeIndex = 0
+		this.m_curWeight = 0
+	}
+	data := (*item.normalNodes)[this.m_nodeIndex]
+	weight := data.Weight
+	if this.m_curWeight == 0 && weight > 0 {
+		this.m_curWeight = weight
+	}
+	if weight > 0 {
+		this.m_curWeight -= 1
+	}
+	if this.m_curWeight <= 0 {
+		this.m_nodeIndex += 1
+	}
+	if this.m_nodeIndex > this.m_nodeLength-1 {
+		this.m_nodeIndex = 0
+	}
+	return &data, nil
 }
 
 type CRandom struct {
@@ -63,7 +91,7 @@ type CIpHash struct {
 }
 
 func (this *CIpHash) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, nil
+	return nil, errors.New("not support")
 }
 
 type CUrlHash struct {
@@ -71,7 +99,7 @@ type CUrlHash struct {
 }
 
 func (this *CUrlHash) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, nil
+	return nil, errors.New("not support")
 }
 
 type CLeastConnections struct {
@@ -79,5 +107,5 @@ type CLeastConnections struct {
 }
 
 func (this *CLeastConnections) Get(serverName string) (*proto.CNodeData, error) {
-	return nil, nil
+	return nil, errors.New("not support")
 }

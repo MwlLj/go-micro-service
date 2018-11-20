@@ -18,6 +18,7 @@ type CNodeData struct {
 	ServerIp         string `json:"serverip"`
 	ServerPort       int    `json:"serverport"`
 	ServerUniqueCode string `json:"serveruniquecode"`
+	Weight           int    `json:"weight"`
 }
 
 type CConnectProperty struct {

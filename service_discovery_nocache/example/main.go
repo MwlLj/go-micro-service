@@ -16,7 +16,7 @@ func main() {
 		PathPrefix:   "micro-service",
 		ServerMode:   s.ServerModeZookeeper,
 		ServerName:   "testserver",
-		NodeData:     proto.CNodeData{ServerIp: "127.0.0.1", ServerPort: 50000, ServerUniqueCode: "008faf1d-1162-492e-9041-171bf8f5c436"},
+		NodeData:     proto.CNodeData{ServerIp: "127.0.0.1", ServerPort: 50000, ServerUniqueCode: "cacd3aa4-4eb8-4bf6-b967-fbcee5377992", Weight: 1},
 		Conns:        conns,
 		ConnTimeoutS: 10})
 	var _ = sds
