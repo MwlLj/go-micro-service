@@ -14,16 +14,18 @@ var _ = errors.New("")
 
 type CZkAdapter struct {
 	proto.CZkBase
-	m_pathPrefix string
-	m_serverName string
-	m_nodeData   proto.CNodeData
-	m_conn       *zk.Conn
+	m_pathPrefix   string
+	m_serverName   string
+	m_isDisconnect bool
+	m_nodeData     proto.CNodeData
+	m_conn         *zk.Conn
 }
 
 func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, serverName string, nodeData *proto.CNodeData, connTimeoutS int, pathPrefix string) error {
 	this.m_serverName = serverName
 	this.m_nodeData = *nodeData
 	this.m_pathPrefix = pathPrefix
+	this.m_isDisconnect = true
 	this.ZkBaseInit(conns, connTimeoutS, this)
 	return nil
 }
@@ -42,10 +44,17 @@ func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
 
 func (this *CZkAdapter) AfterConnect(conn *zk.Conn) error {
 	this.m_conn = conn
-	return this.createMasterAndNormalNode()
+	err := this.createMasterAndNormalNode()
+	if err == nil {
+		this.m_isDisconnect = false
+	}
+	return err
 }
 
 func (this *CZkAdapter) EventCallback(event zk.Event) {
+	if event.State == zk.StateDisconnected {
+		this.m_isDisconnect = true
+	}
 }
 
 func (this *CZkAdapter) SetNodeData(data *proto.CNodeData) {
@@ -144,6 +153,9 @@ func (this *CZkAdapter) checkNodeDelete(selfNode string, ech <-chan zk.Event) {
 	for {
 		select {
 		case event := <-ech:
+			if this.m_isDisconnect == true {
+				return
+			}
 			fmt.Println("[INFO] check master is deleted")
 			path := event.Path
 			li := strings.Split(path, "/")
