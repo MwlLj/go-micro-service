@@ -30,6 +30,7 @@ type ICallback interface {
 type CDataItem struct {
 	masterNode  *proto.CNodeData
 	normalNodes *[]proto.CNodeData
+	isChanged   bool
 }
 
 type ILoadBlance interface {

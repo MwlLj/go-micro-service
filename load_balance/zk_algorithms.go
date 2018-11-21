@@ -205,9 +205,9 @@ func (this *CUrlHash) Get(serverName string, extraData interface{}) (*proto.CNod
 }
 
 type CLeastConnections struct {
-	m_loadBlance ILoadBlance
-	m_algorithm  INormalNodeAlgorithm
-	m_connRecord sync.Map
+	m_loadBlance       ILoadBlance
+	m_algorithm        INormalNodeAlgorithm
+	m_normalNodeRecord *sync.Map
 }
 
 func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
@@ -220,8 +220,14 @@ func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*p
 	if length == 0 {
 		return nil, errors.New("normal node is null")
 	}
+	if this.m_normalNodeRecord == nil || item.isChanged == true {
+		this.reloadNormalRecord(item.normalNodes)
+	}
 	return nil, nil
 }
 
-func (this *CLeastConnections) reload() {
+func (this *CLeastConnections) reloadNormalRecord(nodes *[]proto.CNodeData) {
+	if this.m_normalNodeRecord == nil {
+		this.m_normalNodeRecord = new(sync.Map)
+	}
 }
