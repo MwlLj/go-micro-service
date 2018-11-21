@@ -74,19 +74,54 @@ func (this *CZkAdapter) EventCallback(event zk.Event) {
 
 func (this *CZkAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm {
 	if algorithm == AlgorithmRoundRobin {
-		return &CRoundRobin{m_loadBlance: this}
+		alg := CRoundRobin{m_loadBlance: this}
+		err := alg.init()
+		if err != nil {
+			return nil
+		}
+		return &alg
 	} else if algorithm == AlgorithmWeightRoundRobin {
-		return &CWeightRoundRobin{m_loadBlance: this}
+		alg := CWeightRoundRobin{m_loadBlance: this}
+		err := alg.init()
+		if err != nil {
+			return nil
+		}
+		return &alg
 	} else if algorithm == AlgorithmRandom {
-		return &CRandom{m_loadBlance: this}
+		alg := CRandom{m_loadBlance: this}
+		err := alg.init()
+		if err != nil {
+			return nil
+		}
+		return &alg
 	} else if algorithm == AlgorithmWeightRandom {
-		return &CWeightRandom{m_loadBlance: this}
+		alg := CWeightRandom{m_loadBlance: this}
+		err := alg.init()
+		if err != nil {
+			return nil
+		}
+		return &alg
 	} else if algorithm == AlgorithmIpHash {
-		return &CIpHash{m_loadBlance: this}
+		alg := CIpHash{m_loadBlance: this}
+		err := alg.init()
+		if err != nil {
+			return nil
+		}
+		return &alg
 	} else if algorithm == AlgorithmUrlHash {
-		return &CUrlHash{m_loadBlance: this}
+		alg := CUrlHash{m_loadBlance: this}
+		err := alg.init()
+		if err != nil {
+			return nil
+		}
+		return &alg
 	} else if algorithm == AlgorithmLeastConnect {
-		return &CLeastConnections{m_loadBlance: this}
+		alg := CLeastConnections{m_loadBlance: this}
+		err := alg.init()
+		if err != nil {
+			return nil
+		}
+		return &alg
 	} else {
 		return nil
 	}
@@ -102,6 +137,10 @@ func (this *CZkAdapter) GetMasterNode(serverName string) (*proto.CNodeData, erro
 		return nil, errors.New("is not exist")
 	}
 	return item.masterNode, nil
+}
+
+func (this *CZkAdapter) findAllServerData() (*sync.Map, error) {
+	return &this.m_serverData, nil
 }
 
 func (this *CZkAdapter) findServerData(serverName string) (*CDataItem, error) {

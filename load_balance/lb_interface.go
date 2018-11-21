@@ -2,6 +2,7 @@ package load_balance
 
 import (
 	proto "../common_proto"
+	"sync"
 )
 
 var (
@@ -20,6 +21,7 @@ var (
 
 type INormalNodeAlgorithm interface {
 	Get(serverName string, extraData interface{}) (*proto.CNodeData, error)
+	init() error
 }
 
 type ICallback interface {
@@ -38,7 +40,9 @@ type ILoadBlance interface {
 	GetMasterNode(serverName string) (*proto.CNodeData, error)
 	GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm
 	init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error)
+	findAllServerData() (*sync.Map, error)
 	findServerData(serverName string) (*CDataItem, error)
+	nodeData2hash(data *proto.CNodeData) int
 }
 
 func New(serverMode string, conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (ILoadBlance, <-chan bool) {

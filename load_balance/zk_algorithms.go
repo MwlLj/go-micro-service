@@ -23,6 +23,10 @@ type CRoundRobin struct {
 	m_nodeIndex  int
 }
 
+func (this *CRoundRobin) init() error {
+	return nil
+}
+
 func (this *CRoundRobin) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
 	item, err := this.m_loadBlance.findServerData(serverName)
 	if err != nil {
@@ -50,6 +54,10 @@ type CWeightRoundRobin struct {
 	m_nodeLength int
 	m_nodeIndex  int
 	m_curWeight  int
+}
+
+func (this *CWeightRoundRobin) init() error {
+	return nil
 }
 
 func (this *CWeightRoundRobin) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
@@ -92,6 +100,10 @@ type CRandom struct {
 	m_nodeLength int
 }
 
+func (this *CRandom) init() error {
+	return nil
+}
+
 func (this *CRandom) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
 	item, err := this.m_loadBlance.findServerData(serverName)
 	if err != nil {
@@ -113,6 +125,10 @@ func (this *CRandom) Get(serverName string, extraData interface{}) (*proto.CNode
 type CWeightRandom struct {
 	m_loadBlance ILoadBlance
 	m_nodeLength int
+}
+
+func (this *CWeightRandom) init() error {
+	return nil
 }
 
 func (this *CWeightRandom) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
@@ -162,6 +178,10 @@ type CIpHash struct {
 	m_loadBlance ILoadBlance
 }
 
+func (this *CIpHash) init() error {
+	return nil
+}
+
 func (this *CIpHash) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
 	if extraData == nil {
 		return nil, errors.New("ip is null, you should give extraData ip (type: string)")
@@ -183,6 +203,10 @@ func (this *CIpHash) Get(serverName string, extraData interface{}) (*proto.CNode
 
 type CUrlHash struct {
 	m_loadBlance ILoadBlance
+}
+
+func (this *CUrlHash) init() error {
+	return nil
 }
 
 func (this *CUrlHash) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
@@ -207,7 +231,17 @@ func (this *CUrlHash) Get(serverName string, extraData interface{}) (*proto.CNod
 type CLeastConnections struct {
 	m_loadBlance       ILoadBlance
 	m_algorithm        INormalNodeAlgorithm
-	m_normalNodeRecord *sync.Map
+	m_normalNodeRecord sync.Map
+}
+
+type leastConnectionItem struct {
+	data  *proto.CNodeData
+	times int
+}
+
+func (this *CLeastConnections) init() error {
+	this.reloadNormalRecord()
+	return nil
 }
 
 func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
@@ -220,14 +254,43 @@ func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*p
 	if length == 0 {
 		return nil, errors.New("normal node is null")
 	}
-	if this.m_normalNodeRecord == nil || item.isChanged == true {
-		this.reloadNormalRecord(item.normalNodes)
+	if item.isChanged == true {
+		this.reloadNormalRecord()
 	}
 	return nil, nil
 }
 
-func (this *CLeastConnections) reloadNormalRecord(nodes *[]proto.CNodeData) {
-	if this.m_normalNodeRecord == nil {
-		this.m_normalNodeRecord = new(sync.Map)
+func (this *CLeastConnections) findServer(serverName string) *sync.Map {
+	var data *sync.Map = nil
+	f := func(k, v interface{}) bool {
+		if k.(string) == serverName {
+			data = v.(*sync.Map)
+			return false
+		}
+		return true
 	}
+	this.m_normalNodeRecord.Range(f)
+	return data
+}
+
+func (this *CLeastConnections) reloadNormalRecord() {
+	datas, err := this.m_loadBlance.findAllServerData()
+	if err != nil {
+		return
+	}
+	// clear
+	this.m_normalNodeRecord = sync.Map{}
+	f := func(k, v interface{}) bool {
+		server := k.(string)
+		item := v.(CDataItem)
+		normalNodes := item.normalNodes
+		var innerMap sync.Map
+		for _, node := range *normalNodes {
+			hash := this.m_loadBlance.nodeData2hash(&node)
+			innerMap.Store(hash, &leastConnectionItem{data: &node, times: 0})
+		}
+		this.m_normalNodeRecord.Store(server, &innerMap)
+		return true
+	}
+	datas.Range(f)
 }
