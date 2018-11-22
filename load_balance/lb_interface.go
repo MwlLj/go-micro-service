@@ -6,7 +6,8 @@ import (
 )
 
 var (
-	ServerModeZookeeper = "zookeeper"
+	ServerModeZookeeper     = "zookeeper"
+	ServerModeZookeeperHttp = "zookeeper_http"
 )
 
 var (
@@ -21,7 +22,7 @@ var (
 
 type INormalNodeAlgorithm interface {
 	Get(serverName string, extraData interface{}) (*proto.CNodeData, error)
-	init() error
+	init(loadBlance ILoadBlance) error
 }
 
 type ICallback interface {
@@ -49,6 +50,13 @@ type ILoadBlance interface {
 func New(serverMode string, conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (ILoadBlance, <-chan bool) {
 	if serverMode == ServerModeZookeeper {
 		adapter := &CZkAdapter{}
+		ch, err := adapter.init(conns, pathPrefix, connTimeoutS)
+		if err != nil {
+			return nil, nil
+		}
+		return adapter, ch
+	} else if serverMode == ServerModeZookeeperHttp {
+		adapter := &CZkHttpAdapter{}
 		ch, err := adapter.init(conns, pathPrefix, connTimeoutS)
 		if err != nil {
 			return nil, nil

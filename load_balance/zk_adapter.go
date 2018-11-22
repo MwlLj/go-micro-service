@@ -74,50 +74,50 @@ func (this *CZkAdapter) EventCallback(event zk.Event) {
 
 func (this *CZkAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm {
 	if algorithm == AlgorithmRoundRobin {
-		alg := CRoundRobin{m_loadBlance: this}
-		err := alg.init()
+		alg := CRoundRobin{}
+		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmWeightRoundRobin {
-		alg := CWeightRoundRobin{m_loadBlance: this}
-		err := alg.init()
+		alg := CWeightRoundRobin{}
+		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmRandom {
-		alg := CRandom{m_loadBlance: this}
-		err := alg.init()
+		alg := CRandom{}
+		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmWeightRandom {
-		alg := CWeightRandom{m_loadBlance: this}
-		err := alg.init()
+		alg := CWeightRandom{}
+		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmIpHash {
-		alg := CIpHash{m_loadBlance: this}
-		err := alg.init()
+		alg := CIpHash{}
+		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmUrlHash {
-		alg := CUrlHash{m_loadBlance: this}
-		err := alg.init()
+		alg := CUrlHash{}
+		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmLeastConnect {
-		alg := CLeastConnections{m_loadBlance: this}
-		err := alg.init()
+		alg := CLeastConnections{}
+		err := alg.init(this)
 		if err != nil {
 			return nil
 		}

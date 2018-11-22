@@ -23,7 +23,8 @@ type CRoundRobin struct {
 	m_nodeIndex  int
 }
 
-func (this *CRoundRobin) init() error {
+func (this *CRoundRobin) init(loadBlance ILoadBlance) error {
+	this.m_loadBlance = loadBlance
 	return nil
 }
 
@@ -56,7 +57,8 @@ type CWeightRoundRobin struct {
 	m_curWeight  int
 }
 
-func (this *CWeightRoundRobin) init() error {
+func (this *CWeightRoundRobin) init(loadBlance ILoadBlance) error {
+	this.m_loadBlance = loadBlance
 	return nil
 }
 
@@ -100,7 +102,8 @@ type CRandom struct {
 	m_nodeLength int
 }
 
-func (this *CRandom) init() error {
+func (this *CRandom) init(loadBlance ILoadBlance) error {
+	this.m_loadBlance = loadBlance
 	return nil
 }
 
@@ -127,7 +130,8 @@ type CWeightRandom struct {
 	m_nodeLength int
 }
 
-func (this *CWeightRandom) init() error {
+func (this *CWeightRandom) init(loadBlance ILoadBlance) error {
+	this.m_loadBlance = loadBlance
 	return nil
 }
 
@@ -178,7 +182,8 @@ type CIpHash struct {
 	m_loadBlance ILoadBlance
 }
 
-func (this *CIpHash) init() error {
+func (this *CIpHash) init(loadBlance ILoadBlance) error {
+	this.m_loadBlance = loadBlance
 	return nil
 }
 
@@ -205,7 +210,8 @@ type CUrlHash struct {
 	m_loadBlance ILoadBlance
 }
 
-func (this *CUrlHash) init() error {
+func (this *CUrlHash) init(loadBlance ILoadBlance) error {
+	this.m_loadBlance = loadBlance
 	return nil
 }
 
@@ -239,7 +245,8 @@ type leastConnectionItem struct {
 	times int
 }
 
-func (this *CLeastConnections) init() error {
+func (this *CLeastConnections) init(loadBlance ILoadBlance) error {
+	this.m_loadBlance = loadBlance
 	this.m_loadBlance.SetCallback(this, nil)
 	return nil
 }
