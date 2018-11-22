@@ -240,6 +240,7 @@ type leastConnectionItem struct {
 }
 
 func (this *CLeastConnections) init() error {
+	this.m_loadBlance.SetCallback(this, nil)
 	return nil
 }
 
@@ -292,4 +293,14 @@ func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*p
 	}
 	this.m_normalNodeRecord.Store(serverName, items)
 	return minValue, nil
+}
+
+func (*CLeastConnections) MasterNodeChange(data *proto.CNodeData, userData interface{}) {
+}
+
+func (*CLeastConnections) NormalNodeChange(data *proto.CNodeData, userData interface{}) {
+}
+
+func (this *CLeastConnections) ServerBeDeleted(serverName *string, userData interface{}) {
+	this.m_normalNodeRecord.Delete(*serverName)
 }

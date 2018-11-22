@@ -27,6 +27,7 @@ type INormalNodeAlgorithm interface {
 type ICallback interface {
 	MasterNodeChange(data *proto.CNodeData, userData interface{})
 	NormalNodeChange(data *proto.CNodeData, userData interface{})
+	ServerBeDeleted(serverName *string, userData interface{})
 }
 
 type CDataItem struct {
