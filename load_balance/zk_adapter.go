@@ -170,7 +170,7 @@ func (this *CZkAdapter) sync() error {
 		fmt.Println("[INFO] sync data start")
 		this.syncData()
 		fmt.Println("[INFO] sync data end")
-		time.Sleep(30 * time.Second)
+		time.Sleep(3 * time.Second)
 	}
 }
 
@@ -185,20 +185,22 @@ func (this *CZkAdapter) normalNodeIsUpdate(news *[]proto.CNodeData, olds *[]prot
 	var oldMap sync.Map
 	var oldMapCopy sync.Map
 	for _, old := range *olds {
-		hash := this.nodeData2hash(&old)
-		oldMap.Store(hash, &old)
-		oldMapCopy.Store(hash, &old)
+		oldTmp := old
+		hash := this.nodeData2hash(&oldTmp)
+		oldMap.Store(hash, &oldTmp)
+		oldMapCopy.Store(hash, &oldTmp)
 	}
 	for _, _new := range *news {
-		hash := this.nodeData2hash(&_new)
+		newTmp := _new
+		hash := this.nodeData2hash(&newTmp)
 		_, ok := oldMap.Load(hash)
 		if ok {
 			// both exist -> no change
 		} else {
 			// new exist, old is not exist -> add or update
 			// if is update -> delete first, then add
-			this.deleteNodeData(&_new, &adds)
-			adds = append(adds, _new)
+			this.deleteNodeData(&newTmp, &adds)
+			adds = append(adds, newTmp)
 		}
 		oldMapCopy.Delete(hash)
 	}
@@ -214,7 +216,8 @@ func (this *CZkAdapter) normalNodeIsUpdate(news *[]proto.CNodeData, olds *[]prot
 func (this *CZkAdapter) deleteNodeData(delData *proto.CNodeData, datas *[]proto.CNodeData) {
 	delHash := this.nodeData2hash(delData)
 	for i, d := range *datas {
-		hash := this.nodeData2hash(&d)
+		tmp := d
+		hash := this.nodeData2hash(&tmp)
 		if hash == delHash {
 			*datas = append((*datas)[:i], (*datas)[i+1:]...)
 			break
@@ -237,7 +240,8 @@ func (this *CZkAdapter) syncData() error {
 	this.m_serverData.Range(f1)
 	for _, server := range servers {
 		// fmt.Println("[DEBUG] server: ", server)
-		nodeRootPath := this.JoinPathPrefix(&this.m_pathPrefix, &server)
+		serverTmp := server
+		nodeRootPath := this.JoinPathPrefix(&this.m_pathPrefix, &serverTmp)
 		nodes, _, err := this.m_conn.Children(*nodeRootPath)
 		if err != nil {
 			fmt.Println("[WARNING] get node error, path: ", nodeRootPath)
@@ -281,7 +285,8 @@ func (this *CZkAdapter) syncData() error {
 					*info.normalNodes = append(*info.normalNodes, add)
 				}
 				for _, del := range *deletes {
-					this.deleteNodeData(&del, info.normalNodes)
+					tmp := del
+					this.deleteNodeData(&tmp, info.normalNodes)
 				}
 				info.isChanged = true
 			} else {
