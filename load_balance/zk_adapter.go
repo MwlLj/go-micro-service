@@ -170,7 +170,7 @@ func (this *CZkAdapter) sync() error {
 		fmt.Println("[INFO] sync data start")
 		this.syncData()
 		fmt.Println("[INFO] sync data end")
-		time.Sleep(3 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 }
 

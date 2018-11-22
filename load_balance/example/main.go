@@ -18,7 +18,8 @@ func main() {
 	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmRandom)
 	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmWeightRandom)
 	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmIpHash)
-	algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmUrlHash)
+	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmUrlHash)
+	algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmLeastConnect)
 	select {
 	case <-connChan:
 		break

@@ -240,7 +240,6 @@ type leastConnectionItem struct {
 }
 
 func (this *CLeastConnections) init() error {
-	this.reloadNormalRecord()
 	return nil
 }
 
@@ -254,43 +253,43 @@ func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*p
 	if length == 0 {
 		return nil, errors.New("normal node is null")
 	}
-	if item.isChanged == true {
-		this.reloadNormalRecord()
+	v, ok := this.m_normalNodeRecord.Load(serverName)
+	var items *[]leastConnectionItem = nil
+	if ok {
+		items = v.(*[]leastConnectionItem)
+	} else {
+		items = new([]leastConnectionItem)
 	}
-	return nil, nil
-}
-
-func (this *CLeastConnections) findServer(serverName string) *sync.Map {
-	var data *sync.Map = nil
-	f := func(k, v interface{}) bool {
-		if k.(string) == serverName {
-			data = v.(*sync.Map)
-			return false
+	if item.isChanged == true || !ok {
+		fmt.Println("[INFO] items changed -> delete first, then add")
+		*items = (*items)[0:0]
+		// changed or not exist -> delete first, then add
+		this.m_normalNodeRecord.Delete(serverName)
+		for _, node := range *item.normalNodes {
+			tmp := node
+			*items = append(*items, leastConnectionItem{data: &tmp, times: 0})
 		}
-		return true
+		this.m_normalNodeRecord.Store(serverName, items)
 	}
-	this.m_normalNodeRecord.Range(f)
-	return data
-}
-
-func (this *CLeastConnections) reloadNormalRecord() {
-	datas, err := this.m_loadBlance.findAllServerData()
-	if err != nil {
-		return
-	}
-	// clear
-	this.m_normalNodeRecord = sync.Map{}
-	f := func(k, v interface{}) bool {
-		server := k.(string)
-		item := v.(CDataItem)
-		normalNodes := item.normalNodes
-		var innerMap sync.Map
-		for _, node := range *normalNodes {
-			hash := this.m_loadBlance.nodeData2hash(&node)
-			innerMap.Store(hash, &leastConnectionItem{data: &node, times: 0})
+	firstItem := (*items)[0]
+	min := firstItem.times
+	minValue := firstItem.data
+	for _, it := range *items {
+		if it.times < min {
+			min = it.times
+			minValue = it.data
 		}
-		this.m_normalNodeRecord.Store(server, &innerMap)
-		return true
 	}
-	datas.Range(f)
+	fmt.Println("[INFO] mintimes: ", min)
+	// update times
+	for i, it := range *items {
+		itHash := this.m_loadBlance.nodeData2hash(it.data)
+		minHash := this.m_loadBlance.nodeData2hash(minValue)
+		if itHash == minHash {
+			(*items)[i].times += 1
+			break
+		}
+	}
+	this.m_normalNodeRecord.Store(serverName, items)
+	return minValue, nil
 }
