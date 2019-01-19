@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/samuel/go-zookeeper/zk"
-	"strconv"
+	// "strconv"
 	"strings"
 	"sync"
-	"time"
+	// "time"
 )
 
 var _ = fmt.Println
@@ -18,7 +18,8 @@ var _ = strings.Join
 var _ = json.Unmarshal
 
 type CZkAdapter struct {
-	proto.CZkBase
+	// proto.CZkBase
+	proto.CZkDataSync
 	m_pathPrefix       string
 	m_callback         ICallback
 	m_callbackUserData interface{}
@@ -29,11 +30,14 @@ type CZkAdapter struct {
 }
 
 func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error) {
-	this.m_pathPrefix = pathPrefix
-	this.ZkBaseInit(conns, connTimeoutS, this)
-	this.m_connChan = make(chan bool, 1)
-	go this.sync()
-	return this.m_connChan, nil
+	/*
+		this.m_pathPrefix = pathPrefix
+		this.ZkBaseInit(conns, connTimeoutS, this)
+		this.m_connChan = make(chan bool, 1)
+		go this.sync()
+		return this.m_connChan, nil
+	*/
+	return this.Init(conns, pathPrefix, connTimeoutS)
 }
 
 func (this *CZkAdapter) SetCallback(callback ICallback, userData interface{}) {
@@ -53,23 +57,11 @@ func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
 	return this.DeleteConnProperty(serviceId)
 }
 
-func (this *CZkAdapter) AfterConnect(conn *zk.Conn) error {
-	this.m_conn = conn
-	this.syncData()
-	this.m_isConnect = true
-	this.m_connChan <- true
-	close(this.m_connChan)
-	this.m_connChan = make(chan bool, 1)
-	return nil
+func (this *CZkAdapter) AddRecvNetInfo(topic *string, info *CNetInfo) {
 }
 
-func (this *CZkAdapter) EventCallback(event zk.Event) {
-	if event.Type == zk.EventNodeCreated || event.Type == zk.EventNodeDeleted || event.Type == zk.EventNodeDataChanged {
-		fmt.Println("[INFO] node change")
-	}
-	if event.State == zk.StateDisconnected {
-		this.m_isConnect = false
-	}
+func (this *CZkAdapter) Run() error {
+	return nil
 }
 
 func (this *CZkAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm {
@@ -128,16 +120,49 @@ func (this *CZkAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgo
 }
 
 func (this *CZkAdapter) GetMasterNode(serverName string) (*proto.CNodeData, error) {
-	item, err := this.findServerData(serverName)
+	item, err := this.FindServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] find serverdata error")
 		return nil, err
 	}
-	if item.masterNode == nil {
+	if item.MasterNode == nil {
 		return nil, errors.New("is not exist")
 	}
-	return item.masterNode, nil
+	return item.MasterNode, nil
 }
+
+func (this *CZkAdapter) findAllServerData() (*sync.Map, error) {
+	return this.FindAllServerData()
+}
+
+func (this *CZkAdapter) findServerData(serverName string) (*proto.CDataItem, error) {
+	return this.FindServerData(serverName)
+}
+
+func (this *CZkAdapter) nodeData2hash(data *proto.CNodeData) int {
+	return this.NodeData2hash(data)
+}
+
+/*
+func (this *CZkAdapter) AfterConnect(conn *zk.Conn) error {
+	this.m_conn = conn
+	this.syncData()
+	this.m_isConnect = true
+	this.m_connChan <- true
+	close(this.m_connChan)
+	this.m_connChan = make(chan bool, 1)
+	return nil
+}
+
+func (this *CZkAdapter) EventCallback(event zk.Event) {
+	if event.Type == zk.EventNodeCreated || event.Type == zk.EventNodeDeleted || event.Type == zk.EventNodeDataChanged {
+		fmt.Println("[INFO] node change")
+	}
+	if event.State == zk.StateDisconnected {
+		this.m_isConnect = false
+	}
+}
+
 
 func (this *CZkAdapter) findAllServerData() (*sync.Map, error) {
 	return &this.m_serverData, nil
@@ -306,3 +331,4 @@ func (this *CZkAdapter) syncData() error {
 	serverDataCopy.Range(f)
 	return nil
 }
+*/

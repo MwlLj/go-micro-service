@@ -8,6 +8,7 @@ import (
 var (
 	ServerModeZookeeper     = "zookeeper"
 	ServerModeZookeeperHttp = "zookeeper_http"
+	ServerModeZookeeperMqtt = "zookeeper_mqtt"
 )
 
 var (
@@ -37,13 +38,22 @@ type CDataItem struct {
 	isChanged   bool
 }
 
+type CNetInfo struct {
+	Host     string
+	Port     int
+	UserName string
+	UserPwd  string
+}
+
 type ILoadBlance interface {
 	SetCallback(callback ICallback, userData interface{})
+	AddRecvNetInfo(topic *string, info *CNetInfo)
 	GetMasterNode(serverName string) (*proto.CNodeData, error)
 	GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm
+	Run() error
 	init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error)
 	findAllServerData() (*sync.Map, error)
-	findServerData(serverName string) (*CDataItem, error)
+	findServerData(serverName string) (*proto.CDataItem, error)
 	nodeData2hash(data *proto.CNodeData) int
 }
 
@@ -57,6 +67,13 @@ func New(serverMode string, conns *[]proto.CConnectProperty, pathPrefix string, 
 		return adapter, ch
 	} else if serverMode == ServerModeZookeeperHttp {
 		adapter := &CZkHttpAdapter{}
+		ch, err := adapter.init(conns, pathPrefix, connTimeoutS)
+		if err != nil {
+			return nil, nil
+		}
+		return adapter, ch
+	} else if serverMode == ServerModeZookeeperMqtt {
+		adapter := &CZkMqttAdapter{}
 		ch, err := adapter.init(conns, pathPrefix, connTimeoutS)
 		if err != nil {
 			return nil, nil

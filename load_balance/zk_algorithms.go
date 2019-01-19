@@ -35,12 +35,12 @@ func (this *CRoundRobin) Get(serverName string, extraData interface{}) (*proto.C
 		return nil, err
 	}
 	this.m_mutex.Lock()
-	length := len(*item.normalNodes)
+	length := len(*item.NormalNodes)
 	if length != this.m_nodeLength || this.m_nodeLength == 0 {
 		this.m_nodeLength = length
 		this.m_nodeIndex = 0
 	}
-	data := (*item.normalNodes)[this.m_nodeIndex]
+	data := (*item.NormalNodes)[this.m_nodeIndex]
 	this.m_nodeIndex += 1
 	if this.m_nodeIndex > this.m_nodeLength-1 {
 		this.m_nodeIndex = 0
@@ -69,13 +69,13 @@ func (this *CWeightRoundRobin) Get(serverName string, extraData interface{}) (*p
 		return nil, err
 	}
 	this.m_mutex.Lock()
-	length := len(*item.normalNodes)
+	length := len(*item.NormalNodes)
 	if length != this.m_nodeLength || this.m_nodeLength == 0 {
 		this.m_nodeLength = length
 		this.m_nodeIndex = 0
 		this.m_curWeight = 0
 	}
-	data := (*item.normalNodes)[this.m_nodeIndex]
+	data := (*item.NormalNodes)[this.m_nodeIndex]
 	weight := data.Weight
 	if this.m_curWeight == 0 && weight > 0 {
 		this.m_curWeight = weight
@@ -113,7 +113,7 @@ func (this *CRandom) Get(serverName string, extraData interface{}) (*proto.CNode
 		fmt.Println("[ERROR] server not find")
 		return nil, err
 	}
-	length := len(*item.normalNodes)
+	length := len(*item.NormalNodes)
 	if length == 0 {
 		return nil, errors.New("[ERROR] normal node is null")
 	}
@@ -121,7 +121,7 @@ func (this *CRandom) Get(serverName string, extraData interface{}) (*proto.CNode
 		this.m_nodeLength = length
 	}
 	randomValue := randomInt(0, this.m_nodeLength)
-	data := (*item.normalNodes)[randomValue]
+	data := (*item.NormalNodes)[randomValue]
 	return &data, nil
 }
 
@@ -141,14 +141,14 @@ func (this *CWeightRandom) Get(serverName string, extraData interface{}) (*proto
 		fmt.Println("[ERROR] server not find")
 		return nil, err
 	}
-	length := len(*item.normalNodes)
+	length := len(*item.NormalNodes)
 	if length == 0 {
 		return nil, errors.New("[ERROR] normal node is null")
 	}
 	if length != this.m_nodeLength || this.m_nodeLength == 0 {
 		this.m_nodeLength = length
 	}
-	nodes := this.rebuildNormalNodes(item.normalNodes)
+	nodes := this.rebuildNormalNodes(item.NormalNodes)
 	rebuildLength := len(*nodes)
 	randomValue := randomInt(0, rebuildLength)
 	data := (*nodes)[randomValue]
@@ -196,13 +196,13 @@ func (this *CIpHash) Get(serverName string, extraData interface{}) (*proto.CNode
 		fmt.Println("[ERROR] server not find")
 		return nil, err
 	}
-	length := len(*item.normalNodes)
+	length := len(*item.NormalNodes)
 	if length == 0 {
 		return nil, errors.New("normal node is null")
 	}
 	hash := toHash([]byte(extraData.(string)))
 	index := hash % length
-	data := (*item.normalNodes)[index]
+	data := (*item.NormalNodes)[index]
 	return &data, nil
 }
 
@@ -224,13 +224,13 @@ func (this *CUrlHash) Get(serverName string, extraData interface{}) (*proto.CNod
 		fmt.Println("[ERROR] server not find")
 		return nil, err
 	}
-	length := len(*item.normalNodes)
+	length := len(*item.NormalNodes)
 	if length == 0 {
 		return nil, errors.New("normal node is null")
 	}
 	hash := toHash([]byte(extraData.(string)))
 	index := hash % length
-	data := (*item.normalNodes)[index]
+	data := (*item.NormalNodes)[index]
 	return &data, nil
 }
 
@@ -257,7 +257,7 @@ func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*p
 		fmt.Println("[ERROR] server not find")
 		return nil, err
 	}
-	length := len(*item.normalNodes)
+	length := len(*item.NormalNodes)
 	if length == 0 {
 		return nil, errors.New("normal node is null")
 	}
@@ -268,12 +268,12 @@ func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*p
 	} else {
 		items = new([]leastConnectionItem)
 	}
-	if item.isChanged == true || !ok {
+	if item.IsChanged == true || !ok {
 		fmt.Println("[INFO] items changed -> delete first, then add")
 		*items = (*items)[0:0]
 		// changed or not exist -> delete first, then add
 		this.m_normalNodeRecord.Delete(serverName)
-		for _, node := range *item.normalNodes {
+		for _, node := range *item.NormalNodes {
 			tmp := node
 			*items = append(*items, leastConnectionItem{data: &tmp, times: 0})
 		}
