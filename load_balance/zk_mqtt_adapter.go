@@ -2,6 +2,7 @@ package load_balance
 
 import (
 	proto "../common_proto"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -31,6 +32,8 @@ type CZkMqttAdapter struct {
 	CZkAdapter
 	m_normalNodeAlgorithm     INormalNodeAlgorithm
 	m_transmitTimeoutS        int
+	m_configFilePath          *string
+	m_configReader            *CConfigReader
 	m_mqttComm                mqtt_comm.CMqttComm
 	m_mqTopicBrokerInfoList   []CMqTopicBrokerInfo
 	m_mqTopicBrokerInfoMap    map[string]CMqTopicBrokerInfo
@@ -43,6 +46,8 @@ type CZkMqttAdapter struct {
 func (this *CZkMqttAdapter) init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error) {
 	this.m_isRouterByTopic = true
 	this.m_transmitTimeoutS = 60
+	path := "rule-config.json"
+	this.m_configFilePath = &path
 	return this.CZkAdapter.init(conns, pathPrefix, connTimeoutS)
 }
 
@@ -59,7 +64,32 @@ func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *st
 	if !ok {
 		return nil, errors.New("not found")
 	}
-	response, err := mqttComm.Send(*action, *topic, *request, qos, this.m_transmitTimeoutS)
+	ruleInfo, isFind, err := this.m_configReader.FindRuleInfoByTopic(topic)
+	if err != nil {
+		return nil, err
+	}
+	var buffer bytes.Buffer
+	if isFind == false {
+		return nil, errors.New("rule is not match")
+	} else {
+		var nodeData *proto.CNodeData = nil
+		if ruleInfo.IsMaster {
+			nodeData, err = this.GetMasterNode(ruleInfo.ObjServerName)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			nodeData, err = this.m_normalNodeAlgorithm.Get(ruleInfo.ObjServerName, nil)
+			if err != nil {
+				return nil, err
+			}
+		}
+		serverUuid := nodeData.ServerUniqueCode
+		buffer.WriteString(*topic)
+		buffer.WriteString("/")
+		buffer.WriteString(serverUuid)
+	}
+	response, err := mqttComm.Send(*action, buffer.String(), *request, qos, this.m_transmitTimeoutS)
 	return &response, err
 }
 
@@ -82,6 +112,12 @@ func (this *CZkMqttAdapter) AddRecvNetInfo(topic *string, info *CNetInfo) {
 }
 
 func (this *CZkMqttAdapter) Run(data interface{}) error {
+	if this.m_configReader == nil {
+		return errors.New("please call SetConfigFilePath")
+	}
+	if this.m_normalNodeAlgorithm == nil {
+		return errors.New("please call SetNormalNodeAlgorithm")
+	}
 	var err error = nil
 	defer func() {
 		if e := recover(); e != nil {
@@ -144,6 +180,21 @@ func (this *CZkMqttAdapter) SetNormalNodeAlgorithm(algorithm string) error {
 		return errors.New("not support")
 	}
 	return nil
+}
+
+func (this *CZkMqttAdapter) SetConfigFilePath(path *string) error {
+	if path != nil {
+		this.m_configFilePath = path
+	}
+	var err error = nil
+	if this.m_configReader == nil {
+		this.m_configReader = &CConfigReader{}
+		err = this.m_configReader.Init(this.m_configFilePath)
+		if err != nil {
+			this.m_configReader = nil
+		}
+	}
+	return err
 }
 
 func (this *CZkMqttAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm {
