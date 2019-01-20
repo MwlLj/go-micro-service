@@ -47,10 +47,12 @@ type CNetInfo struct {
 
 type ILoadBlance interface {
 	SetCallback(callback ICallback, userData interface{})
+	SetTransmitTimeoutS(s int)
 	AddRecvNetInfo(topic *string, info *CNetInfo)
+	SetNormalNodeAlgorithm(algorithm string) error
 	GetMasterNode(serverName string) (*proto.CNodeData, error)
 	GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm
-	Run() error
+	Run(data interface{}) error
 	init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error)
 	findAllServerData() (*sync.Map, error)
 	findServerData(serverName string) (*proto.CDataItem, error)

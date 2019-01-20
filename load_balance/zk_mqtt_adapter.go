@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/MwlLj/mqtt_comm"
-	MQTT "github.com/eclipse/paho.mqtt.golang"
 	"github.com/samuel/go-zookeeper/zk"
 	"strconv"
 	"strings"
@@ -30,16 +29,38 @@ type CMqTopicBrokerInfo struct {
 
 type CZkMqttAdapter struct {
 	CZkAdapter
+	m_normalNodeAlgorithm     INormalNodeAlgorithm
+	m_transmitTimeoutS        int
+	m_mqttComm                mqtt_comm.CMqttComm
 	m_mqTopicBrokerInfoList   []CMqTopicBrokerInfo
 	m_mqTopicBrokerInfoMap    map[string]CMqTopicBrokerInfo
 	m_mqTopicBrokerInfosMutex sync.Mutex
 	m_mqConnectMap            map[*CMqTopicBrokerInfo]mqtt_comm.CMqttComm
+	m_mqConnectMapMutex       sync.Mutex
 	m_isRouterByTopic         bool
 }
 
 func (this *CZkMqttAdapter) init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error) {
 	this.m_isRouterByTopic = true
+	this.m_transmitTimeoutS = 60
 	return this.CZkAdapter.init(conns, pathPrefix, connTimeoutS)
+}
+
+func (this *CZkMqttAdapter) SetTransmitTimeoutS(s int) {
+	this.m_transmitTimeoutS = s
+}
+
+func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *string, qos int) (*string, error) {
+	brokerInfo, err := this.findBroker(topic)
+	if err != nil {
+		return nil, err
+	}
+	mqttComm, ok := this.m_mqConnectMap[brokerInfo]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	response, err := mqttComm.Send(*action, *topic, *request, qos, this.m_transmitTimeoutS)
+	return &response, err
 }
 
 func (this *CZkMqttAdapter) AddRecvNetInfo(topic *string, info *CNetInfo) {
@@ -60,24 +81,48 @@ func (this *CZkMqttAdapter) AddRecvNetInfo(topic *string, info *CNetInfo) {
 	}
 }
 
-func (this *CZkMqttAdapter) Run() error {
+func (this *CZkMqttAdapter) Run(data interface{}) error {
+	var err error = nil
+	defer func() {
+		if e := recover(); e != nil {
+			err = errors.New("data struct error, please use CNetInfo")
+		}
+	}()
+	// connect recvs brokers
+	connInner := func(info *CMqTopicBrokerInfo) error {
+		mqttComm := mqtt_comm.NewMqttComm("zk_mqtt_loadblance", "1.0", 0)
+		if mqttComm == nil {
+			return errors.New("new mqttcomm error")
+		}
+		mqttComm.SetMessageBus(info.info.Host, info.info.Port, info.info.UserName, info.info.UserPwd)
+		mqttComm.Connect(false)
+		this.m_mqConnectMapMutex.Lock()
+		this.m_mqConnectMap[info] = mqttComm
+		this.m_mqConnectMapMutex.Unlock()
+		return nil
+	}
 	if this.m_isRouterByTopic == true {
 		for _, v := range this.m_mqTopicBrokerInfoMap {
-			mqttComm := mqtt_comm.NewMqttComm("zk_mqtt_loadblance", "1.0", 0)
-			if mqttComm == nil {
-				return errors.New("new mqttcomm error")
+			err = connInner(&v)
+			if err != nil {
+				return err
 			}
-			mqttComm.SetMessageBus(v.info.Host, v.info.Port, v.info.UserName, v.info.UserPwd)
-			// err := mqttComm.Subscribe(mqtt_comm.POST, "#", 0, &handlers.CPostUserHandle{}, this)
-			// if err != nil {
-			// 	return err
-			// }
-			mqttComm.Connect(false)
-			this.m_mqConnectMap[&v] = mqttComm
 		}
 	} else {
+		for _, v := range this.m_mqTopicBrokerInfoList {
+			err = connInner(&v)
+			if err != nil {
+				return err
+			}
+		}
 	}
-	return nil
+	// connect broker
+	brokerNetInfo := data.(CNetInfo)
+	this.m_mqttComm = mqtt_comm.NewMqttComm("cfgs", "1.0", 0)
+	this.m_mqttComm.SetMessageBus(brokerNetInfo.Host, brokerNetInfo.Port, brokerNetInfo.UserName, brokerNetInfo.UserPwd)
+	this.m_mqttComm.SubscribeAll(0, &CRequestHandler{}, this)
+	this.m_mqttComm.Connect(true)
+	return err
 }
 
 func (this *CZkMqttAdapter) findBroker(topic *string) (*CMqTopicBrokerInfo, error) {
@@ -93,63 +138,59 @@ func (this *CZkMqttAdapter) findBroker(topic *string) (*CMqTopicBrokerInfo, erro
 	return nil, errors.New("not found")
 }
 
-func (this *CZkMqttAdapter) onSubscribeMessage(client MQTT.Client, message MQTT.Message) {
-	topic := message.Topic()
-	brokerInfo, err := this.findBroker(&topic)
-	if err != nil {
-		return
+func (this *CZkMqttAdapter) SetNormalNodeAlgorithm(algorithm string) error {
+	this.m_normalNodeAlgorithm = this.GetNormalNodeAlgorithm(algorithm)
+	if this.m_normalNodeAlgorithm == nil {
+		return errors.New("not support")
 	}
-	_, ok := this.m_mqConnectMap[brokerInfo]
-	if !ok {
-		return
-	}
+	return nil
 }
 
 func (this *CZkMqttAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNodeAlgorithm {
 	if algorithm == AlgorithmRoundRobin {
-		alg := CHttpRoundRobin{}
+		alg := CMqttRoundRobin{}
 		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmWeightRoundRobin {
-		alg := CHttpWeightRoundRobin{}
+		alg := CMqttWeightRoundRobin{}
 		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmRandom {
-		alg := CHttpRandom{}
+		alg := CMqttRandom{}
 		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmWeightRandom {
-		alg := CHttpWeightRandom{}
+		alg := CMqttWeightRandom{}
 		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmIpHash {
-		alg := CHttpIpHash{}
+		alg := CMqttIpHash{}
 		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmUrlHash {
-		alg := CHttpUrlHash{}
+		alg := CMqttUrlHash{}
 		err := alg.init(this)
 		if err != nil {
 			return nil
 		}
 		return &alg
 	} else if algorithm == AlgorithmLeastConnect {
-		alg := CHttpLeastConnections{}
+		alg := CMqttLeastConnections{}
 		err := alg.init(this)
 		if err != nil {
 			return nil
@@ -158,4 +199,12 @@ func (this *CZkMqttAdapter) GetNormalNodeAlgorithm(algorithm string) INormalNode
 	} else {
 		return nil
 	}
+}
+
+type CRequestHandler struct {
+}
+
+func (this *CRequestHandler) Handle(topic *string, action *string, request *string, qos int, mc mqtt_comm.CMqttComm, user interface{}) (*string, error) {
+	adapter := user.(CZkMqttAdapter)
+	return adapter.onMessage(topic, action, request, qos)
 }

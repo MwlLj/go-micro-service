@@ -9,7 +9,7 @@ import (
 
 var _ = fmt.Println
 
-func main() {
+func normalTest() {
 	var conns []proto.CConnectProperty
 	conns = append(conns, proto.CConnectProperty{ServerHost: "127.0.0.1", ServerPort: 2182, ServiceId: "server_1"})
 	bls, connChan := bl.New(bl.ServerModeZookeeper, &conns, "micro-service", 10)
@@ -49,4 +49,42 @@ func main() {
 	for {
 		time.Sleep(100 * time.Millisecond)
 	}
+}
+
+func mqttTest() {
+	var conns []proto.CConnectProperty
+	conns = append(conns, proto.CConnectProperty{ServerHost: "127.0.0.1", ServerPort: 2182, ServiceId: "server_1"})
+	bls, connChan := bl.New(bl.ServerModeZookeeperMqtt, &conns, "micro-service", 10)
+	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmWeightRoundRobin)
+	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmRandom)
+	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmWeightRandom)
+	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmIpHash)
+	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmUrlHash)
+	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmLeastConnect)
+	select {
+	case <-connChan:
+		break
+	}
+	err := bls.SetNormalNodeAlgorithm(bl.AlgorithmRoundRobin)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	bls.AddRecvNetInfo(nil, &bl.CNetInfo{
+		Host: "localhost",
+		Port: 51883,
+	})
+	err = bls.Run(bl.CNetInfo{
+		Host: "localhost",
+		Port: 51885,
+	})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+}
+
+func main() {
+	// normalTest()
+	mqttTest()
 }

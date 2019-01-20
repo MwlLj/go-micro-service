@@ -40,6 +40,13 @@ func (this *CZkAdapter) init(conns *[]proto.CConnectProperty, pathPrefix string,
 	return this.Init(conns, pathPrefix, connTimeoutS)
 }
 
+func (this *CZkAdapter) SetTransmitTimeoutS(s int) {
+}
+
+func (this *CZkAdapter) SetNormalNodeAlgorithm(algorithm string) error {
+	return nil
+}
+
 func (this *CZkAdapter) SetCallback(callback ICallback, userData interface{}) {
 	this.m_callback = callback
 	this.m_callbackUserData = userData
@@ -60,7 +67,7 @@ func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
 func (this *CZkAdapter) AddRecvNetInfo(topic *string, info *CNetInfo) {
 }
 
-func (this *CZkAdapter) Run() error {
+func (this *CZkAdapter) Run(data interface{}) error {
 	return nil
 }
 
