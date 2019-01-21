@@ -46,6 +46,7 @@ type CNetInfo struct {
 }
 
 type ILoadBlance interface {
+	TopicJoin(topic *string, serverUniqueCode *string) *string
 	SetCallback(callback ICallback, userData interface{})
 	SetTransmitTimeoutS(s int)
 	SetConfigFilePath(path *string) error

@@ -51,6 +51,18 @@ func (this *CZkMqttAdapter) init(conns *[]proto.CConnectProperty, pathPrefix str
 	return this.CZkAdapter.init(conns, pathPrefix, connTimeoutS)
 }
 
+func (this *CZkMqttAdapter) TopicJoin(topic *string, serverUniqueCode *string) *string {
+	var buffer bytes.Buffer
+	buffer.WriteString(*topic)
+	bTopic := []byte(*topic)
+	if bTopic[len(bTopic)-1] != '/' {
+		buffer.WriteString("/")
+	}
+	buffer.WriteString(*serverUniqueCode)
+	top := buffer.String()
+	return &top
+}
+
 func (this *CZkMqttAdapter) SetTransmitTimeoutS(s int) {
 	this.m_transmitTimeoutS = s
 }

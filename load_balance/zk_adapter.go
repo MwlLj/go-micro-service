@@ -51,6 +51,10 @@ func (this *CZkAdapter) SetConfigFilePath(path *string) error {
 	return nil
 }
 
+func (this *CZkAdapter) TopicJoin(topic *string, serverUniqueCode *string) *string {
+	return nil
+}
+
 func (this *CZkAdapter) SetCallback(callback ICallback, userData interface{}) {
 	this.m_callback = callback
 	this.m_callbackUserData = userData
