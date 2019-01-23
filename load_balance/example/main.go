@@ -70,6 +70,8 @@ func mqttTest() {
 		fmt.Println(err)
 		return
 	}
+	cfgPath := "mqtt_load_blance.cfg"
+	bls.SetConfigFilePath(&cfgPath)
 	bls.AddRecvNetInfo(nil, &bl.CNetInfo{
 		Host: "localhost",
 		Port: 51883,

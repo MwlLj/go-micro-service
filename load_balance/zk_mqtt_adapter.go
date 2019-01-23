@@ -48,6 +48,8 @@ func (this *CZkMqttAdapter) init(conns *[]proto.CConnectProperty, pathPrefix str
 	this.m_transmitTimeoutS = 60
 	path := "rule-config.json"
 	this.m_configFilePath = &path
+	this.m_mqTopicBrokerInfoMap = make(map[string]CMqTopicBrokerInfo)
+	this.m_mqConnectMap = make(map[*CMqTopicBrokerInfo]mqtt_comm.CMqttComm)
 	return this.CZkAdapter.init(conns, pathPrefix, connTimeoutS)
 }
 
@@ -151,17 +153,17 @@ func (this *CZkMqttAdapter) Run(data interface{}) error {
 	}
 	if this.m_isRouterByTopic == true {
 		for _, v := range this.m_mqTopicBrokerInfoMap {
-			err = connInner(&v)
-			if err != nil {
-				return err
-			}
+			tmp := v
+			go func() {
+				connInner(&tmp)
+			}()
 		}
 	} else {
 		for _, v := range this.m_mqTopicBrokerInfoList {
-			err = connInner(&v)
-			if err != nil {
-				return err
-			}
+			tmp := v
+			go func() {
+				connInner(&tmp)
+			}()
 		}
 	}
 	// connect broker

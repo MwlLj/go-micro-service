@@ -20,7 +20,7 @@ func (this *CAddServerInfoHandler) Handle(topic *string, action *string, request
 
 func (this *CServer) Start() {
 	this.m_mqttComm = mqtt_comm.NewMqttComm("configs", "1.0", 0)
-	this.m_mqttComm.SetMessageBus("localhost", 51885, "", "")
+	this.m_mqttComm.SetMessageBus("localhost", 51883, "", "")
 	this.m_mqttComm.Subscribe(mqtt_comm.POST, "1.0/configs/serverinfo", 0, &CAddServerInfoHandler{}, this)
 	this.m_mqttComm.Connect(true)
 }
