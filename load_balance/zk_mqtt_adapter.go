@@ -168,7 +168,7 @@ func (this *CZkMqttAdapter) Run(data interface{}) error {
 	}
 	// connect broker
 	brokerNetInfo := data.(CNetInfo)
-	this.m_mqttComm = mqtt_comm.NewMqttComm("cfgs", "1.0", 0)
+	this.m_mqttComm = mqtt_comm.NewMqttComm("", "", 0)
 	this.m_mqttComm.SetMessageBus(brokerNetInfo.Host, brokerNetInfo.Port, brokerNetInfo.UserName, brokerNetInfo.UserPwd)
 	this.m_mqttComm.SubscribeAll(0, &CRequestHandler{}, this)
 	this.m_mqttComm.Connect(true)
@@ -271,6 +271,6 @@ type CRequestHandler struct {
 
 func (this *CRequestHandler) Handle(topic *string, action *string, request *string, qos int, mc mqtt_comm.CMqttComm, user interface{}) (*string, error) {
 	fmt.Println("handle ...")
-	adapter := user.(CZkMqttAdapter)
+	adapter := user.(*CZkMqttAdapter)
 	return adapter.onMessage(topic, action, request, qos)
 }
