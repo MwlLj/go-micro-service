@@ -270,6 +270,7 @@ type CRequestHandler struct {
 }
 
 func (this *CRequestHandler) Handle(topic *string, action *string, request *string, qos int, mc mqtt_comm.CMqttComm, user interface{}) (*string, error) {
+	fmt.Println("handle ...")
 	adapter := user.(CZkMqttAdapter)
 	return adapter.onMessage(topic, action, request, qos)
 }
