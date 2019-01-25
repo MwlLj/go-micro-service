@@ -34,8 +34,11 @@ func (this *CRoundRobin) Get(serverName string, extraData interface{}) (*proto.C
 		fmt.Println("[ERROR] server not find")
 		return nil, err
 	}
-	this.m_mutex.Lock()
 	length := len(*item.NormalNodes)
+	if length == 0 {
+		return nil, errors.New("normal node is not exist")
+	}
+	this.m_mutex.Lock()
 	if length != this.m_nodeLength || this.m_nodeLength == 0 {
 		this.m_nodeLength = length
 		this.m_nodeIndex = 0

@@ -38,7 +38,7 @@ type CZkMqttAdapter struct {
 	m_mqTopicBrokerInfoList   []CMqTopicBrokerInfo
 	m_mqTopicBrokerInfoMap    map[string]CMqTopicBrokerInfo
 	m_mqTopicBrokerInfosMutex sync.Mutex
-	m_mqConnectMap            map[*CMqTopicBrokerInfo]mqtt_comm.CMqttComm
+	m_mqConnectMap            map[string]mqtt_comm.CMqttComm
 	m_mqConnectMapMutex       sync.Mutex
 	m_isRouterByTopic         bool
 }
@@ -49,8 +49,16 @@ func (this *CZkMqttAdapter) init(conns *[]proto.CConnectProperty, pathPrefix str
 	path := "rule-config.json"
 	this.m_configFilePath = &path
 	this.m_mqTopicBrokerInfoMap = make(map[string]CMqTopicBrokerInfo)
-	this.m_mqConnectMap = make(map[*CMqTopicBrokerInfo]mqtt_comm.CMqttComm)
+	this.m_mqConnectMap = make(map[string]mqtt_comm.CMqttComm)
 	return this.CZkAdapter.init(conns, pathPrefix, connTimeoutS)
+}
+
+func (this *CZkMqttAdapter) brokerHostJoin(host *string, port int) *string {
+	var buffer bytes.Buffer
+	buffer.WriteString(*host)
+	buffer.WriteString(strconv.FormatInt(int64(port), 10))
+	s := buffer.String()
+	return &s
 }
 
 func (this *CZkMqttAdapter) TopicJoin(topic *string, serverUniqueCode *string) *string {
@@ -72,29 +80,42 @@ func (this *CZkMqttAdapter) SetTransmitTimeoutS(s int) {
 func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *string, qos int) (*string, error) {
 	brokerInfo, err := this.findBroker(topic)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
-	mqttComm, ok := this.m_mqConnectMap[brokerInfo]
+	fmt.Println("-- broker info --")
+	fmt.Println(*brokerInfo.info)
+	fmt.Println("-- connect map --")
+	for _, item := range this.m_mqConnectMap {
+		fmt.Println(item)
+	}
+	brokerFlag := this.brokerHostJoin(&brokerInfo.info.Host, brokerInfo.info.Port)
+	mqttComm, ok := this.m_mqConnectMap[*brokerFlag]
 	if !ok {
+		fmt.Println("not found")
 		return nil, errors.New("not found")
 	}
 	ruleInfo, isFind, err := this.m_configReader.FindRuleInfoByTopic(topic)
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	var buffer bytes.Buffer
 	if isFind == false {
+		fmt.Println("is not find")
 		return nil, errors.New("rule is not match")
 	} else {
 		var nodeData *proto.CNodeData = nil
 		if ruleInfo.IsMaster {
 			nodeData, err = this.GetMasterNode(ruleInfo.ObjServerName)
 			if err != nil {
+				fmt.Println(err)
 				return nil, err
 			}
 		} else {
 			nodeData, err = this.m_normalNodeAlgorithm.Get(ruleInfo.ObjServerName, nil)
 			if err != nil {
+				fmt.Println(err)
 				return nil, err
 			}
 		}
@@ -147,7 +168,8 @@ func (this *CZkMqttAdapter) Run(data interface{}) error {
 		mqttComm.SetMessageBus(info.info.Host, info.info.Port, info.info.UserName, info.info.UserPwd)
 		mqttComm.Connect(false)
 		this.m_mqConnectMapMutex.Lock()
-		this.m_mqConnectMap[info] = mqttComm
+		brokerFlag := this.brokerHostJoin(&info.info.Host, info.info.Port)
+		this.m_mqConnectMap[*brokerFlag] = mqttComm
 		this.m_mqConnectMapMutex.Unlock()
 		return nil
 	}
@@ -270,7 +292,6 @@ type CRequestHandler struct {
 }
 
 func (this *CRequestHandler) Handle(topic *string, action *string, request *string, qos int, mc mqtt_comm.CMqttComm, user interface{}) (*string, error) {
-	fmt.Println("handle ...")
 	adapter := user.(*CZkMqttAdapter)
 	return adapter.onMessage(topic, action, request, qos)
 }
