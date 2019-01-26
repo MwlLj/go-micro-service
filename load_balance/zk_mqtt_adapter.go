@@ -112,8 +112,11 @@ func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *st
 		} else {
 			nodeData, err = this.m_normalNodeAlgorithm.Get(ruleInfo.ObjServerName, nil)
 			if err != nil {
-				fmt.Println(err)
-				return nil, err
+				nodeData, err = this.GetMasterNode(ruleInfo.ObjServerName)
+				if err != nil {
+					fmt.Println(err)
+					return nil, err
+				}
 			}
 		}
 		serverUuid := nodeData.ServerUniqueCode
