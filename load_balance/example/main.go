@@ -101,7 +101,7 @@ func (this *CConfigReader) ReadConfig(path *string) (*bl.CConfigInfo, error) {
 func mqttTest() {
 	var conns []proto.CConnectProperty
 	conns = append(conns, proto.CConnectProperty{ServerHost: "127.0.0.1", ServerPort: 2182, ServiceId: "server_1"})
-	bls, connChan := bl.New(bl.ServerModeZookeeperMqtt, &conns, "micro-service", 10)
+	bls, connChan := bl.New(bl.ServerModeZookeeperMqtt, &conns, "taobao-service", 10)
 	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmWeightRoundRobin)
 	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmRandom)
 	// algorithm := bls.GetNormalNodeAlgorithm(bl.AlgorithmWeightRandom)

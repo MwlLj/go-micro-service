@@ -35,7 +35,7 @@ type CRecvBrokerInfo struct {
 
 type CRouterRule struct {
 	Rule       string `json:"rule"`
-	ServerName string `json:server-name`
+	ServerName string `json:"server-name"`
 	IsMaster   bool   `json:"is-master"`
 }
 

@@ -37,7 +37,7 @@ func (this *CServer) Start() {
 	}
 	serverUniqueCode := uid.String()
 	sds := s.New(&s.CInitProperty{
-		PathPrefix: "micro-service",
+		PathPrefix: "taobao-service",
 		ServerMode: s.ServerModeZookeeper,
 		ServerName: "configs",
 		NodeData: proto.CNodeData{

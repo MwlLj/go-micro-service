@@ -80,12 +80,6 @@ func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *st
 		fmt.Println(err)
 		return nil, err
 	}
-	fmt.Println("-- broker info --")
-	fmt.Println(*brokerInfo.info)
-	fmt.Println("-- connect map --")
-	for _, item := range this.m_mqConnectMap {
-		fmt.Println(item)
-	}
 	brokerFlag := this.brokerHostJoin(&brokerInfo.info.Host, brokerInfo.info.Port)
 	mqttComm, ok := this.m_mqConnectMap[*brokerFlag]
 	if !ok {
@@ -121,7 +115,7 @@ func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *st
 		}
 		serverUuid := nodeData.ServerUniqueCode
 		buffer.WriteString(*topic)
-		buffer.WriteString("/")
+		// buffer.WriteString("/")
 		buffer.WriteString(serverUuid)
 	}
 	response, err := mqttComm.Send(*action, buffer.String(), *request, qos, this.m_transmitTimeoutS)

@@ -34,5 +34,5 @@ func main() {
 		log.Fatalln(err)
 		return
 	}
-	mqttComm.Post("user", string("hello"), 1, 30*60*1000*1000*1000)
+	mqttComm.Post("configs/serverinfo", string("hello"), 1, 30*60*1000*1000*1000)
 }
