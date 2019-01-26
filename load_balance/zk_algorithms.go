@@ -29,7 +29,7 @@ func (this *CRoundRobin) init(loadBlance ILoadBlance) error {
 }
 
 func (this *CRoundRobin) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
-	item, err := this.m_loadBlance.findServerData(serverName)
+	item, err := this.m_loadBlance.FindServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
 		return nil, err
@@ -66,7 +66,7 @@ func (this *CWeightRoundRobin) init(loadBlance ILoadBlance) error {
 }
 
 func (this *CWeightRoundRobin) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
-	item, err := this.m_loadBlance.findServerData(serverName)
+	item, err := this.m_loadBlance.FindServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
 		return nil, err
@@ -111,7 +111,7 @@ func (this *CRandom) init(loadBlance ILoadBlance) error {
 }
 
 func (this *CRandom) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
-	item, err := this.m_loadBlance.findServerData(serverName)
+	item, err := this.m_loadBlance.FindServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
 		return nil, err
@@ -139,7 +139,7 @@ func (this *CWeightRandom) init(loadBlance ILoadBlance) error {
 }
 
 func (this *CWeightRandom) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
-	item, err := this.m_loadBlance.findServerData(serverName)
+	item, err := this.m_loadBlance.FindServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
 		return nil, err
@@ -194,7 +194,7 @@ func (this *CIpHash) Get(serverName string, extraData interface{}) (*proto.CNode
 	if extraData == nil {
 		return nil, errors.New("ip is null, you should give extraData ip (type: string)")
 	}
-	item, err := this.m_loadBlance.findServerData(serverName)
+	item, err := this.m_loadBlance.FindServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
 		return nil, err
@@ -222,7 +222,7 @@ func (this *CUrlHash) Get(serverName string, extraData interface{}) (*proto.CNod
 	if extraData == nil {
 		return nil, errors.New("url is null, you should give extraData url (type: string)")
 	}
-	item, err := this.m_loadBlance.findServerData(serverName)
+	item, err := this.m_loadBlance.FindServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
 		return nil, err
@@ -255,7 +255,7 @@ func (this *CLeastConnections) init(loadBlance ILoadBlance) error {
 }
 
 func (this *CLeastConnections) Get(serverName string, extraData interface{}) (*proto.CNodeData, error) {
-	item, err := this.m_loadBlance.findServerData(serverName)
+	item, err := this.m_loadBlance.FindServerData(serverName)
 	if err != nil {
 		fmt.Println("[ERROR] server not find")
 		return nil, err

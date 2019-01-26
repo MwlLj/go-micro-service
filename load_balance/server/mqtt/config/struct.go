@@ -1,10 +1,5 @@
 package config
 
-type CBrokerNet struct {
-	Host string `json:"host"`
-	Port int    `json:"port"`
-}
-
 type CBrokerNetInfo struct {
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
@@ -22,7 +17,7 @@ type CServiceDiscory struct {
 	PathPrefix string               `json:"path-prefix"`
 	ServerMode string               `json:"server-mode"`
 	ServerName string               `json:"server-name"`
-	NodeData   CBrokerNet           `json:"nodedata"`
+	NodeData   CBrokerNetInfo       `json:"nodedata"`
 	Weight     int                  `json:"weight"`
 	Conns      []CServiceDiscoryNet `json:"conns"`
 }

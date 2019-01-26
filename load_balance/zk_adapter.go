@@ -150,8 +150,8 @@ func (this *CZkAdapter) findAllServerData() (*sync.Map, error) {
 	return this.FindAllServerData()
 }
 
-func (this *CZkAdapter) findServerData(serverName string) (*proto.CDataItem, error) {
-	return this.FindServerData(serverName)
+func (this *CZkAdapter) FindServerData(serverName string) (*proto.CDataItem, error) {
+	return this.CZkDataSync.FindServerData(serverName)
 }
 
 func (this *CZkAdapter) nodeData2hash(data *proto.CNodeData) int {

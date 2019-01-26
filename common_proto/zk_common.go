@@ -17,6 +17,8 @@ type CConnInfo struct {
 type CNodeData struct {
 	ServerIp         string `json:"serverip"`
 	ServerPort       int    `json:"serverport"`
+	UserName         string `json:"username"`
+	UserPwd          string `json:"userpwd"`
 	ServerUniqueCode string `json:"serveruniquecode"`
 	Weight           int    `json:"weight"`
 }

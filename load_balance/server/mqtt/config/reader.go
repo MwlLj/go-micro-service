@@ -23,7 +23,7 @@ func (this *CReader) Read(path string) (*CConfigInfo, error) {
 	net.ServiceId = "server_1"
 	serviceDiscoryNet = append(serviceDiscoryNet, net)
 	brokerRegisterInfo.Conns = serviceDiscoryNet
-	var nodeData CBrokerNet
+	var nodeData CBrokerNetInfo
 	nodeData.Host = "localhost"
 	nodeData.Port = 1883
 	brokerRegisterInfo.NodeData = nodeData

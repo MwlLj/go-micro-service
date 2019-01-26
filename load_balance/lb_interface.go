@@ -60,7 +60,7 @@ type ILoadBlance interface {
 	Run(data interface{}) error
 	init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error)
 	findAllServerData() (*sync.Map, error)
-	findServerData(serverName string) (*proto.CDataItem, error)
+	FindServerData(serverName string) (*proto.CDataItem, error)
 	nodeData2hash(data *proto.CNodeData) int
 }
 
