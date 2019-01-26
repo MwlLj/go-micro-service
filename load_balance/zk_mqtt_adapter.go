@@ -32,7 +32,6 @@ type CZkMqttAdapter struct {
 	CZkAdapter
 	m_normalNodeAlgorithm     INormalNodeAlgorithm
 	m_transmitTimeoutS        int
-	m_configFilePath          *string
 	m_configReader            *CConfigReader
 	m_mqttComm                mqtt_comm.CMqttComm
 	m_mqTopicBrokerInfoList   []CMqTopicBrokerInfo
@@ -46,8 +45,6 @@ type CZkMqttAdapter struct {
 func (this *CZkMqttAdapter) init(conns *[]proto.CConnectProperty, pathPrefix string, connTimeoutS int) (<-chan bool, error) {
 	this.m_isRouterByTopic = true
 	this.m_transmitTimeoutS = 60
-	path := "rule-config.json"
-	this.m_configFilePath = &path
 	this.m_mqTopicBrokerInfoMap = make(map[string]CMqTopicBrokerInfo)
 	this.m_mqConnectMap = make(map[string]mqtt_comm.CMqttComm)
 	return this.CZkAdapter.init(conns, pathPrefix, connTimeoutS)
@@ -218,14 +215,11 @@ func (this *CZkMqttAdapter) SetNormalNodeAlgorithm(algorithm string) error {
 	return nil
 }
 
-func (this *CZkMqttAdapter) SetConfigFilePath(path *string) error {
-	if path != nil {
-		this.m_configFilePath = path
-	}
+func (this *CZkMqttAdapter) SetConfigInfo(info *CConfigInfo) error {
 	var err error = nil
 	if this.m_configReader == nil {
 		this.m_configReader = &CConfigReader{}
-		err = this.m_configReader.Init(this.m_configFilePath)
+		err = this.m_configReader.Init(info)
 		if err != nil {
 			this.m_configReader = nil
 		}

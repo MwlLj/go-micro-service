@@ -8,27 +8,21 @@ import (
 	"regexp"
 )
 
-type CRuleInfo struct {
-	ObjServerName string `json:"objservername"`
-	IsMaster      bool   `json:"ismaster"`
-}
-
-type CConfigInfo struct {
-	Rules map[string]*CRuleInfo `json:"rules"`
-}
-
 type CConfigReader struct {
 	configs.CConfigBase
 	m_configInfo *CConfigInfo
 }
 
-func (this *CConfigReader) Init(path *string) error {
+func (this *CConfigReader) Init(info *CConfigInfo) error {
 	var err error = nil
-	this.m_configInfo, err = this.Read(path)
-	if err != nil {
-		return err
-	}
-	return nil
+	/*
+		this.m_configInfo, err = this.Read(path)
+		if err != nil {
+			return err
+		}
+	*/
+	this.m_configInfo = info
+	return err
 }
 
 func (this *CConfigReader) FindRuleInfoByTopic(topic *string) (*CRuleInfo, bool, error) {

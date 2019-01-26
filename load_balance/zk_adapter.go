@@ -47,7 +47,7 @@ func (this *CZkAdapter) SetNormalNodeAlgorithm(algorithm string) error {
 	return nil
 }
 
-func (this *CZkAdapter) SetConfigFilePath(path *string) error {
+func (this *CZkAdapter) SetConfigInfo(info *CConfigInfo) error {
 	return nil
 }
 

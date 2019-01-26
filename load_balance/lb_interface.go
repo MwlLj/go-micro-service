@@ -45,11 +45,20 @@ type CNetInfo struct {
 	UserPwd  string
 }
 
+type CRuleInfo struct {
+	ObjServerName string `json:"objservername"`
+	IsMaster      bool   `json:"ismaster"`
+}
+
+type CConfigInfo struct {
+	Rules map[string]*CRuleInfo `json:"rules"`
+}
+
 type ILoadBlance interface {
 	TopicJoin(topic *string, serverUniqueCode *string) *string
 	SetCallback(callback ICallback, userData interface{})
 	SetTransmitTimeoutS(s int)
-	SetConfigFilePath(path *string) error
+	SetConfigInfo(info *CConfigInfo) error
 	AddRecvNetInfo(topic *string, info *CNetInfo)
 	SetNormalNodeAlgorithm(algorithm string) error
 	GetMasterNode(serverName string) (*proto.CNodeData, error)
