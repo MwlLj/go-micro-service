@@ -8,29 +8,29 @@ type CBrokerNet struct {
 type CBrokerNetInfo struct {
 	Host     string `json:"host"`
 	Port     int    `json:"port"`
-	UserName string `json:"username"`
-	UserPwd  string `json:"userpwd"`
+	UserName string `json:"user-name"`
+	UserPwd  string `json:"user-pwd"`
 }
 
 type CServiceDiscoryNet struct {
-	ServerHost string
-	ServerPort int
-	ServiceId  string
+	ServerHost string `json:"server-host"`
+	ServerPort int    `json:"server-port"`
+	ServiceId  string `json:"service-id"`
 }
 
 type CServiceDiscory struct {
-	PathPrefix string               `json:"pathprefix"`
-	ServerMode string               `json:"servermode"`
-	ServerName string               `json:"servername"`
+	PathPrefix string               `json:"path-prefix"`
+	ServerMode string               `json:"server-mode"`
+	ServerName string               `json:"server-name"`
 	NodeData   CBrokerNet           `json:"nodedata"`
 	Weight     int                  `json:"weight"`
 	Conns      []CServiceDiscoryNet `json:"conns"`
 }
 
 type CLoadBalanceInfo struct {
-	PathPrefix          string               `json:"pathprefix"`
-	ServerMode          string               `json:"servermode"`
-	NormalNodeAlgorithm string               `json:"normalNodeAlgorithm"`
+	PathPrefix          string               `json:"path-prefix"`
+	ServerMode          string               `json:"server-mode"`
+	NormalNodeAlgorithm string               `json:"normal-node-algorithm"`
 	Conns               []CServiceDiscoryNet `json:"conns"`
 }
 
@@ -40,8 +40,8 @@ type CRecvBrokerInfo struct {
 
 type CRouterRule struct {
 	Rule       string `json:"rule"`
-	ServerName string `json:servername`
-	IsMaster   bool   `json:"ismaster"`
+	ServerName string `json:server-name`
+	IsMaster   bool   `json:"is-master"`
 }
 
 type CRouterRuleInfo struct {
@@ -49,8 +49,8 @@ type CRouterRuleInfo struct {
 }
 
 type CConfigInfo struct {
-	BrokerRegisterInfo  CServiceDiscory  `json:"brokerreg"`
-	ServiceRegisterInfo CLoadBalanceInfo `json:"servicereg"`
-	RecvBrokerInfo      CRecvBrokerInfo  `json:"recvbrokerinfo"`
-	RouterRuleInfo      CRouterRuleInfo  `json:"routerrule"`
+	BrokerRegisterInfo  CServiceDiscory  `json:"broker-reg"`
+	ServiceRegisterInfo CLoadBalanceInfo `json:"service-reg"`
+	RecvBrokerInfo      CRecvBrokerInfo  `json:"recvbroker-info"`
+	RouterRuleInfo      CRouterRuleInfo  `json:"router-rule"`
 }

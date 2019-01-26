@@ -94,9 +94,9 @@ func (this *CZkDataSync) sync() error {
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
-		fmt.Println("[INFO] sync data start")
+		// fmt.Println("[INFO] sync data start")
 		this.syncData()
-		fmt.Println("[INFO] sync data end")
+		// fmt.Println("[INFO] sync data end")
 		time.Sleep(30 * time.Second)
 	}
 }

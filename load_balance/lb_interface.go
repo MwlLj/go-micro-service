@@ -32,12 +32,6 @@ type ICallback interface {
 	ServerBeDeleted(serverName *string, userData interface{})
 }
 
-type CDataItem struct {
-	masterNode  *proto.CNodeData
-	normalNodes *[]proto.CNodeData
-	isChanged   bool
-}
-
 type CNetInfo struct {
 	Host     string
 	Port     int

@@ -1,7 +1,7 @@
-package main
+package impl
 
 import (
-	bl "../../../"
+	bl "../../.."
 	proto "../../../../common_proto"
 	sd "../../../../service_discovery_nocache"
 	cfg "../config"
@@ -13,6 +13,8 @@ import (
 )
 
 var _ = fmt.Println
+var _ = bytes.Equal
+var _ = json.Marshal
 
 type CServer struct {
 	m_configReader cfg.CReader
@@ -31,7 +33,7 @@ func (this *CServer) Start(path string) error {
 		brokerServiceDiscoveryConns = append(brokerServiceDiscoveryConns, proto.CConnectProperty{
 			ServerHost: item.ServerHost,
 			ServerPort: item.ServerPort,
-			ServiceId:  item.ServerId,
+			ServiceId:  item.ServiceId,
 		})
 	}
 	brokerServiceObj := sd.New(&sd.CInitProperty{
@@ -53,10 +55,10 @@ func (this *CServer) Start(path string) error {
 	// register service to service discovery
 	serviceRegisterInfo := configInfo.ServiceRegisterInfo
 	var ServiceServiceDiscoveryConns []proto.CConnectProperty
-	for _, item := range serviceRegisterInfo {
+	for _, item := range serviceRegisterInfo.Conns {
 		ServiceServiceDiscoveryConns = append(ServiceServiceDiscoveryConns, proto.CConnectProperty{
-			ServerHost: item.ServiceHost,
-			ServerPort: item.ServicePort,
+			ServerHost: item.ServerHost,
+			ServerPort: item.ServerPort,
 			ServiceId:  item.ServiceId,
 		})
 	}
@@ -90,9 +92,9 @@ func (this *CServer) Start(path string) error {
 	var blConfigInfo bl.CConfigInfo
 	var rules map[string]*bl.CRuleInfo = make(map[string]*bl.CRuleInfo)
 	for _, item := range routerRuleInfo.Rules {
-		rule := bl.CConfigInfo
+		rule := bl.CRuleInfo{}
 		rule.ObjServerName = item.ServerName
-		rule.IsMater = item.IsMaster
+		rule.IsMaster = item.IsMaster
 		rules[item.Rule] = &rule
 	}
 	blConfigInfo.Rules = rules
