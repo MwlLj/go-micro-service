@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/MwlLj/mqtt_comm"
 	"github.com/samuel/go-zookeeper/zk"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -37,8 +38,7 @@ type CZkMqttAdapter struct {
 	m_mqTopicBrokerInfoList   []CMqTopicBrokerInfo
 	m_mqTopicBrokerInfoMap    map[string]CMqTopicBrokerInfo
 	m_mqTopicBrokerInfosMutex sync.Mutex
-	m_mqConnectMap            map[string]mqtt_comm.CMqttComm
-	m_mqConnectMapMutex       sync.Mutex
+	m_mqConnectMap            sync.Map
 	m_isRouterByTopic         bool
 }
 
@@ -46,7 +46,7 @@ func (this *CZkMqttAdapter) init(conns *[]proto.CConnectProperty, pathPrefix str
 	this.m_isRouterByTopic = true
 	this.m_transmitTimeoutS = 60
 	this.m_mqTopicBrokerInfoMap = make(map[string]CMqTopicBrokerInfo)
-	this.m_mqConnectMap = make(map[string]mqtt_comm.CMqttComm)
+	// this.m_mqConnectMap = make(map[string]mqtt_comm.CMqttComm)
 	return this.CZkAdapter.init(conns, pathPrefix, connTimeoutS)
 }
 
@@ -81,27 +81,57 @@ func (this *CZkMqttAdapter) delTopicPrefix(topic *string) *string {
 	return &s
 }
 
+func (this *CZkMqttAdapter) connectBroker(brokerInfo *CMqTopicBrokerInfo) mqtt_comm.CMqttComm {
+	mqttComm := mqtt_comm.NewMqttComm("zk-mqtt-loadblance", "1.0", 0)
+	mqttComm.SetMessageBus(
+		brokerInfo.info.Host,
+		brokerInfo.info.Port,
+		brokerInfo.info.UserName,
+		brokerInfo.info.UserPwd,
+	)
+	mqttComm.Connect(false)
+	return mqttComm
+}
+
+func (this *CZkMqttAdapter) findMqttConnect(brokerInfo *CMqTopicBrokerInfo) (mqtt_comm.CMqttComm, error) {
+	brokerHash := this.brokerHostJoin(&brokerInfo.info.Host, brokerInfo.info.Port)
+	value, ok := this.m_mqConnectMap.Load(brokerHash)
+	var mqttComm mqtt_comm.CMqttComm = nil
+	if !ok {
+		// not exist
+		mqttComm = this.connectBroker(brokerInfo)
+		this.m_mqConnectMap.Store(brokerHash, mqttComm)
+	} else {
+		// exist
+		mqttComm = value.(mqtt_comm.CMqttComm)
+		if mqttComm.IsConnect() == false {
+			mqttComm = nil
+			mqttComm = this.connectBroker(brokerInfo)
+		}
+	}
+	return mqttComm, nil
+}
+
 func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *string, qos int) (*string, error) {
 	brokerInfo, err := this.findBroker(topic)
 	if err != nil {
-		fmt.Println(err)
+		log.Println("find recver broker by topic error, err: ", err)
+		return nil, err
+	}
+	mqttComm, err := this.findMqttConnect(brokerInfo)
+	if err != nil {
+		log.Println("connect recver broker error")
 		return nil, err
 	}
 	top := this.delTopicPrefix(topic)
-	brokerFlag := this.brokerHostJoin(&brokerInfo.info.Host, brokerInfo.info.Port)
-	mqttComm, ok := this.m_mqConnectMap[*brokerFlag]
-	if !ok {
-		fmt.Println("not found")
-		return nil, errors.New("not found")
-	}
 	ruleInfo, isFind, err := this.m_configReader.FindRuleInfoByTopic(top)
 	if err != nil {
-		fmt.Println(err)
+		log.Println("find router rule by topic error, err: ", err)
 		return nil, err
 	}
 	var buffer bytes.Buffer
 	if isFind == false {
-		fmt.Println("is not find")
+		log.Println("not find router rule by topic")
 		return nil, errors.New("rule is not match")
 	} else {
 		var nodeData *proto.CNodeData = nil
@@ -161,35 +191,6 @@ func (this *CZkMqttAdapter) Run(data interface{}) error {
 			err = errors.New("data struct error, please use CNetInfo")
 		}
 	}()
-	// connect recvs brokers
-	connInner := func(info *CMqTopicBrokerInfo) error {
-		mqttComm := mqtt_comm.NewMqttComm("zk_mqtt_loadblance", "1.0", 0)
-		if mqttComm == nil {
-			return errors.New("new mqttcomm error")
-		}
-		mqttComm.SetMessageBus(info.info.Host, info.info.Port, info.info.UserName, info.info.UserPwd)
-		mqttComm.Connect(false)
-		this.m_mqConnectMapMutex.Lock()
-		brokerFlag := this.brokerHostJoin(&info.info.Host, info.info.Port)
-		this.m_mqConnectMap[*brokerFlag] = mqttComm
-		this.m_mqConnectMapMutex.Unlock()
-		return nil
-	}
-	if this.m_isRouterByTopic == true {
-		for _, v := range this.m_mqTopicBrokerInfoMap {
-			tmp := v
-			go func() {
-				connInner(&tmp)
-			}()
-		}
-	} else {
-		for _, v := range this.m_mqTopicBrokerInfoList {
-			tmp := v
-			go func() {
-				connInner(&tmp)
-			}()
-		}
-	}
 	// connect broker
 	brokerNetInfo := data.(CNetInfo)
 	this.m_mqttComm = mqtt_comm.NewMqttComm("", "", 0)
