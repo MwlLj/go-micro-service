@@ -1,10 +1,10 @@
 package main
 
 import (
-	bl "../../.."
-	proto "../../../../common_proto"
-	s "../../../../service_discovery_nocache"
 	"fmt"
+	proto "github.com/MwlLj/go-micro-service/common_proto"
+	bl "github.com/MwlLj/go-micro-service/load_balance"
+	s "github.com/MwlLj/go-micro-service/service_discovery_nocache"
 	"github.com/MwlLj/mqtt_comm"
 	"github.com/satori/go.uuid"
 )

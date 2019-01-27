@@ -1,11 +1,11 @@
 package main
 
 import (
-	bl ".."
-	proto "../../common_proto"
 	"bytes"
 	"encoding/json"
 	"fmt"
+	proto "github.com/MwlLj/go-micro-service/common_proto"
+	bl "github.com/MwlLj/go-micro-service/load_balance"
 	"github.com/MwlLj/gotools/configs"
 	"time"
 )

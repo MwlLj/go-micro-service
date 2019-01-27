@@ -1,11 +1,11 @@
 package main
 
 import (
-	bl "../../.."
-	s "../../../../service_discovery_nocache"
-	"../client"
-	"../config"
 	"fmt"
+	bl "github.com/MwlLj/go-micro-service/load_balance"
+	"github.com/MwlLj/go-micro-service/load_balance/client/mqtt/client"
+	"github.com/MwlLj/go-micro-service/load_balance/client/mqtt/config"
+	s "github.com/MwlLj/go-micro-service/service_discovery_nocache"
 	"github.com/MwlLj/mqtt_comm"
 	"github.com/satori/go.uuid"
 )

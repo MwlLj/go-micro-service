@@ -1,15 +1,15 @@
 package impl
 
 import (
-	bl "../../.."
-	proto "../../../../common_proto"
-	s "../../../../service_discovery_nocache"
-	"../config"
-	"../url"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	proto "github.com/MwlLj/go-micro-service/common_proto"
+	bl "github.com/MwlLj/go-micro-service/load_balance"
+	"github.com/MwlLj/go-micro-service/load_balance/client/mqtt/config"
+	"github.com/MwlLj/go-micro-service/load_balance/client/mqtt/url"
+	s "github.com/MwlLj/go-micro-service/service_discovery_nocache"
 	"github.com/MwlLj/mqtt_comm"
 	"log"
 	"strconv"

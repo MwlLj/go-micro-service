@@ -1,9 +1,9 @@
 package main
 
 import (
-	s ".."
-	proto "../../common_proto"
 	"fmt"
+	proto "github.com/MwlLj/go-micro-service/common_proto"
+	s "github.com/MwlLj/go-micro-service/service_discovery_nocache"
 	"time"
 )
 

@@ -1,10 +1,10 @@
 package service_discovery_nocache
 
 import (
-	proto "../common_proto"
 	"encoding/json"
 	"errors"
 	"fmt"
+	proto "github.com/MwlLj/go-micro-service/common_proto"
 	"github.com/samuel/go-zookeeper/zk"
 	"strings"
 )

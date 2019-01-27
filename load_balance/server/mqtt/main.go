@@ -1,8 +1,8 @@
 package main
 
 import (
-	"./impl"
 	"flag"
+	"github.com/MwlLj/go-micro-service/load_balance/server/mqtt/impl"
 )
 
 func main() {

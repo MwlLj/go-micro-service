@@ -1,7 +1,7 @@
 package service_discovery_nocache
 
 import (
-	proto "../common_proto"
+	proto "github.com/MwlLj/go-micro-service/common_proto"
 )
 
 var (

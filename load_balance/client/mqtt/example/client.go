@@ -1,10 +1,10 @@
 package main
 
 import (
-	bl "../../.."
-	"../client"
-	"../config"
 	"fmt"
+	bl "github.com/MwlLj/go-micro-service/load_balance"
+	"github.com/MwlLj/go-micro-service/load_balance/client/mqtt/client"
+	"github.com/MwlLj/go-micro-service/load_balance/client/mqtt/config"
 	"log"
 )
 

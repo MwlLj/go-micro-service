@@ -1,11 +1,11 @@
 package load_balance
 
 import (
-	proto "../common_proto"
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	proto "github.com/MwlLj/go-micro-service/common_proto"
 	"github.com/MwlLj/mqtt_comm"
 	"github.com/samuel/go-zookeeper/zk"
 	"log"

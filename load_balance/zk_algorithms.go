@@ -1,9 +1,9 @@
 package load_balance
 
 import (
-	proto "../common_proto"
 	"errors"
 	"fmt"
+	proto "github.com/MwlLj/go-micro-service/common_proto"
 	"hash/crc32"
 	"math/rand"
 	"strconv"
