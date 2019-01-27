@@ -26,6 +26,7 @@ func (this *CReader) Read(path string) (*CConfigInfo, error) {
 	var nodeData CBrokerNetInfo
 	nodeData.Host = "localhost"
 	nodeData.Port = 1883
+	nodeData.ServerUniqueCode = "fcae5124-f37e-4987-a6d7-3782f90c6288"
 	brokerRegisterInfo.NodeData = nodeData
 	brokerRegisterInfo.PathPrefix = "micro-service"
 	brokerRegisterInfo.ServerMode = "zookeeper"

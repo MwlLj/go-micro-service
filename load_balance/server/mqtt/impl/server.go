@@ -43,7 +43,7 @@ func (this *CServer) Start(path string) error {
 		NodeData: proto.CNodeData{
 			ServerIp:         brokerRegisterInfo.NodeData.Host,
 			ServerPort:       brokerRegisterInfo.NodeData.Port,
-			ServerUniqueCode: "",
+			ServerUniqueCode: brokerRegisterInfo.NodeData.ServerUniqueCode,
 			Weight:           brokerRegisterInfo.Weight,
 		},
 		Conns:        brokerServiceDiscoveryConns,
@@ -101,8 +101,9 @@ func (this *CServer) Start(path string) error {
 	bls.SetConfigInfo(&blConfigInfo)
 	// run
 	err = bls.Run(bl.CNetInfo{
-		Host: brokerRegisterInfo.NodeData.Host,
-		Port: brokerRegisterInfo.NodeData.Port,
+		Host:       brokerRegisterInfo.NodeData.Host,
+		Port:       brokerRegisterInfo.NodeData.Port,
+		ExtraField: brokerRegisterInfo.NodeData.ServerUniqueCode,
 	})
 	if err != nil {
 		log.Fatalln("run mqtt load balance error, err: ", err)

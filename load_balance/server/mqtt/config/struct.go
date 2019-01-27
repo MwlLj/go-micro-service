@@ -1,10 +1,11 @@
 package config
 
 type CBrokerNetInfo struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	UserName string `json:"user-name"`
-	UserPwd  string `json:"user-pwd"`
+	Host             string `json:"host"`
+	Port             int    `json:"port"`
+	UserName         string `json:"user-name"`
+	UserPwd          string `json:"user-pwd"`
+	ServerUniqueCode string `json:"server-uniquecode"`
 }
 
 type CServiceDiscoryNet struct {

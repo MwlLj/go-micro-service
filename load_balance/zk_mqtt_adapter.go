@@ -74,19 +74,27 @@ func (this *CZkMqttAdapter) SetTransmitTimeoutS(s int) {
 	this.m_transmitTimeoutS = s
 }
 
+func (this *CZkMqttAdapter) delTopicPrefix(topic *string) *string {
+	index := strings.Index(*topic, "/")
+	bTopic := []byte(*topic)
+	s := string(bTopic[(index + 1):len(bTopic)])
+	return &s
+}
+
 func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *string, qos int) (*string, error) {
 	brokerInfo, err := this.findBroker(topic)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
+	top := this.delTopicPrefix(topic)
 	brokerFlag := this.brokerHostJoin(&brokerInfo.info.Host, brokerInfo.info.Port)
 	mqttComm, ok := this.m_mqConnectMap[*brokerFlag]
 	if !ok {
 		fmt.Println("not found")
 		return nil, errors.New("not found")
 	}
-	ruleInfo, isFind, err := this.m_configReader.FindRuleInfoByTopic(topic)
+	ruleInfo, isFind, err := this.m_configReader.FindRuleInfoByTopic(top)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -114,7 +122,7 @@ func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *st
 			}
 		}
 		serverUuid := nodeData.ServerUniqueCode
-		buffer.WriteString(*topic)
+		buffer.WriteString(*top)
 		// buffer.WriteString("/")
 		buffer.WriteString(serverUuid)
 	}
@@ -186,7 +194,7 @@ func (this *CZkMqttAdapter) Run(data interface{}) error {
 	brokerNetInfo := data.(CNetInfo)
 	this.m_mqttComm = mqtt_comm.NewMqttComm("", "", 0)
 	this.m_mqttComm.SetMessageBus(brokerNetInfo.Host, brokerNetInfo.Port, brokerNetInfo.UserName, brokerNetInfo.UserPwd)
-	this.m_mqttComm.SubscribeAll(0, &CRequestHandler{}, this)
+	this.m_mqttComm.SubscribeAll(&brokerNetInfo.ExtraField, 0, &CRequestHandler{}, this)
 	this.m_mqttComm.Connect(true)
 	return err
 }

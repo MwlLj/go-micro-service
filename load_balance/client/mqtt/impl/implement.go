@@ -4,6 +4,7 @@ import (
 	bl "../../.."
 	proto "../../../../common_proto"
 	"../config"
+	"../url"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -34,42 +35,45 @@ type CClient struct {
 	m_subscribeInfo []*CSubscribeInfo
 }
 
-func (this *CClient) GetConnect() (mqtt_comm.CMqttComm, error) {
+func (this *CClient) GetConnect() (mqtt_comm.CMqttComm, url.IUrlMaker, error) {
 	nodeItem, err := this.m_balance.FindServerData(this.m_configInfo.MqttLoadBalanceInfo.MqttLoadBalanceServerName)
 	if err != nil {
 		log.Println("find server data from service discovery error, err: ", err)
-		return nil, err
+		return nil, nil, err
 	}
 	var host *string = nil
 	var ip string
 	var port int
 	var userName string
 	var userPwd string
+	var serverUniqueCode string
 	if nodeItem.NormalNodes == nil || len(*nodeItem.NormalNodes) == 0 {
 		if nodeItem.MasterNode == nil {
 			log.Println("normal node or master node both is not exist")
-			return nil, errors.New("normal and master node is not exist")
+			return nil, nil, errors.New("normal and master node is not exist")
 		} else {
 			ip = nodeItem.MasterNode.ServerIp
 			port = nodeItem.MasterNode.ServerPort
 			userName = nodeItem.MasterNode.UserName
 			userPwd = nodeItem.MasterNode.UserPwd
+			serverUniqueCode = nodeItem.MasterNode.ServerUniqueCode
 			host = this.joinHost(&nodeItem.MasterNode.ServerIp, nodeItem.MasterNode.ServerPort)
 		}
 	} else {
 		if this.m_algorithm == nil {
 			log.Println("normal node algorithm is nil")
-			return nil, errors.New("normal node algorithm is nil")
+			return nil, nil, errors.New("normal node algorithm is nil")
 		}
 		data, err := this.m_algorithm.Get(this.m_configInfo.MqttLoadBalanceInfo.MqttLoadBalanceServerName, nil)
 		if err != nil {
 			log.Println("get normal node error, err: ", err)
-			return nil, err
+			return nil, nil, err
 		}
 		ip = data.ServerIp
 		port = data.ServerPort
 		userName = data.UserName
 		userPwd = data.UserPwd
+		serverUniqueCode = data.ServerUniqueCode
 		host = this.joinHost(&data.ServerIp, data.ServerPort)
 	}
 	var mqttComm mqtt_comm.CMqttComm
@@ -87,7 +91,9 @@ func (this *CClient) GetConnect() (mqtt_comm.CMqttComm, error) {
 			this.m_mqttCommMap.Store(*host, mqttComm)
 		}
 	}
-	return mqttComm, nil
+	return mqttComm, &url.CUrlMaker{
+		ServerUniqueCode: &serverUniqueCode,
+	}, nil
 }
 
 func (this *CClient) connectBroker(ip *string, port int, userName *string, userPwd *string) mqtt_comm.CMqttComm {

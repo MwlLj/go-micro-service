@@ -4,6 +4,7 @@ import (
 	bl "../../.."
 	"../client"
 	"../config"
+	"fmt"
 	"log"
 )
 
@@ -29,10 +30,12 @@ func main() {
 	loadBalanceInfo.Conns = conns
 	info.MqttLoadBalanceInfo = loadBalanceInfo
 	cli := client.New(&info)
-	mqttComm, err := cli.GetConnect()
+	mqttComm, urlMaker, err := cli.GetConnect()
 	if err != nil {
 		log.Fatalln(err)
 		return
 	}
-	mqttComm.Post("configs/serverinfo", string("hello"), 1, 30*60*1000*1000*1000)
+	topic := "configs/serverinfo"
+	fmt.Println(*urlMaker.Make(&topic))
+	mqttComm.Post(*urlMaker.Make(&topic), string("hello"), 1, 30*60*1000*1000*1000)
 }

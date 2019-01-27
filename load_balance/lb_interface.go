@@ -33,10 +33,11 @@ type ICallback interface {
 }
 
 type CNetInfo struct {
-	Host     string
-	Port     int
-	UserName string
-	UserPwd  string
+	Host       string
+	Port       int
+	UserName   string
+	UserPwd    string
+	ExtraField string
 }
 
 type CRuleInfo struct {
