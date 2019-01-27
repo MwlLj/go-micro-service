@@ -17,11 +17,8 @@ func main() {
 	loadBalanceInfo.ServerMode = bl.ServerModeZookeeper
 	loadBalanceInfo.NormalNodeAlgorithm = bl.AlgorithmRoundRobin
 	loadBalanceInfo.MqttLoadBalanceServerName = "mqtt-nginx"
-	loadBalanceInfo.MqttServerName = "cgws"
-	loadBalanceInfo.MqttServerVersion = "1.0"
-	loadBalanceInfo.MqttServerRecvQos = 0
-	var conns []config.CServiceDiscoryNet
-	conn := config.CServiceDiscoryNet{
+	var conns []config.CServiceDiscoveryNet
+	conn := config.CServiceDiscoveryNet{
 		ServerHost: "localhost",
 		ServerPort: 2182,
 		ServiceId:  "server_1",
@@ -29,6 +26,12 @@ func main() {
 	conns = append(conns, conn)
 	loadBalanceInfo.Conns = conns
 	info.MqttLoadBalanceInfo = loadBalanceInfo
+	// service init
+	serviceInfo := config.CServiceInfo{}
+	serviceInfo.ServerName = "cgws"
+	serviceInfo.ServerVersion = "1.0"
+	serviceInfo.ServerRecvQos = 0
+	info.ServiceInfo = serviceInfo
 	cli := client.New(&info)
 	mqttComm, urlMaker, err := cli.GetConnect()
 	if err != nil {

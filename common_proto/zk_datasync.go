@@ -126,7 +126,8 @@ func (this *CZkDataSync) normalNodeIsUpdate(news *[]CNodeData, olds *[]CNodeData
 		} else {
 			// new exist, old is not exist -> add or update
 			// if is update -> delete first, then add
-			this.deleteNodeData(&newTmp, &adds)
+			// this.deleteNodeData(&newTmp, &adds)
+			this.deleteNodeData(&newTmp, olds)
 			adds = append(adds, newTmp)
 		}
 		oldMapCopy.Delete(hash)
@@ -149,6 +150,16 @@ func (this *CZkDataSync) deleteNodeData(delData *CNodeData, datas *[]CNodeData) 
 			*datas = append((*datas)[:i], (*datas)[i+1:]...)
 			break
 		}
+	}
+}
+
+func (this *CZkDataSync) masterNodeIsUpdate(_new *CNodeData, _old *CNodeData) *CNodeData {
+	newHash := this.NodeData2hash(_new)
+	oldHash := this.NodeData2hash(_old)
+	if newHash == oldHash {
+		return _old
+	} else {
+		return _new
 	}
 }
 
@@ -203,6 +214,7 @@ func (this *CZkDataSync) syncData() error {
 			this.m_serverData.Store(server, CDataItem{MasterNode: &masterNode, NormalNodes: &normalNodes, IsChanged: false})
 		} else {
 			info := serverInfo.(CDataItem)
+			// normal node is changed
 			adds, deletes := this.normalNodeIsUpdate(&normalNodes, info.NormalNodes)
 			addLen := len(*adds)
 			delLen := len(*deletes)
@@ -219,6 +231,8 @@ func (this *CZkDataSync) syncData() error {
 			} else {
 				info.IsChanged = false
 			}
+			// master is changed
+			info.MasterNode = this.masterNodeIsUpdate(&masterNode, info.MasterNode)
 			this.m_serverData.Store(server, info)
 		}
 		// remove new have from old -> remain: need delete

@@ -3,6 +3,7 @@ package impl
 import (
 	bl "../../.."
 	proto "../../../../common_proto"
+	s "../../../../service_discovery_nocache"
 	"../config"
 	"../url"
 	"bytes"
@@ -97,19 +98,59 @@ func (this *CClient) GetConnect() (mqtt_comm.CMqttComm, url.IUrlMaker, error) {
 }
 
 func (this *CClient) connectBroker(ip *string, port int, userName *string, userPwd *string) mqtt_comm.CMqttComm {
-	mqttComm := mqtt_comm.NewMqttComm(this.m_configInfo.MqttLoadBalanceInfo.MqttServerName, this.m_configInfo.MqttLoadBalanceInfo.MqttServerVersion, this.m_configInfo.MqttLoadBalanceInfo.MqttServerRecvQos)
+	mqttComm := mqtt_comm.NewMqttComm(this.m_configInfo.ServiceInfo.ServerName, this.m_configInfo.ServiceInfo.ServerVersion, this.m_configInfo.ServiceInfo.ServerRecvQos)
 	mqttComm.SetMessageBus(*ip, port, *userName, *userPwd)
 	mqttComm.Connect(false)
-	for _, item := range this.m_subscribeInfo {
-		mqttComm.Subscribe(item.action, item.topic, item.qos, item.handler, item.userData)
-	}
 	return mqttComm
 }
 
-func (this *CClient) JoinTopic(topic string, serverUniqueCode *string) *string {
+func (this *CClient) recverConnectBroker(ip *string, port int, userName *string, userPwd *string) {
+	mqttComm := mqtt_comm.NewMqttComm(this.m_configInfo.ServiceInfo.ServerName, this.m_configInfo.ServiceInfo.ServerVersion, this.m_configInfo.ServiceInfo.ServerRecvQos)
+	mqttComm.SetMessageBus(*ip, port, *userName, *userPwd)
+	for _, item := range this.m_subscribeInfo {
+		top := this.topicJoin(&item.topic, &this.m_configInfo.ServiceInfo.ServerUniqueCode)
+		mqttComm.Subscribe(item.action, *top, item.qos, item.handler, item.userData)
+	}
+	mqttComm.Connect(true)
+}
+
+func (this *CClient) StartRecver() {
+	var conns []proto.CConnectProperty
+	for _, item := range this.m_configInfo.ServiceInfo.ServiceDiscoveryConns {
+		conns = append(conns, proto.CConnectProperty{
+			ServerHost: item.ServerHost,
+			ServerPort: item.ServerPort,
+			ServiceId:  item.ServiceId,
+		})
+	}
+	sds := s.New(&s.CInitProperty{
+		PathPrefix: this.m_configInfo.ServiceInfo.PathPrefix,
+		ServerMode: this.m_configInfo.ServiceInfo.ServerMode,
+		ServerName: this.m_configInfo.ServiceInfo.ServerName,
+		NodeData: proto.CNodeData{
+			ServerIp:         this.m_configInfo.ServiceInfo.BrokerHost,
+			ServerPort:       this.m_configInfo.ServiceInfo.BrokerPort,
+			ServerUniqueCode: this.m_configInfo.ServiceInfo.ServerUniqueCode,
+			Weight:           this.m_configInfo.ServiceInfo.Weight,
+		},
+		Conns:        conns,
+		ConnTimeoutS: 10})
+	if sds == nil {
+		log.Fatalln("connect service discovery error")
+		return
+	}
+	this.recverConnectBroker(
+		&this.m_configInfo.ServiceInfo.BrokerHost,
+		this.m_configInfo.ServiceInfo.BrokerPort,
+		&this.m_configInfo.ServiceInfo.BrokerUserName,
+		&this.m_configInfo.ServiceInfo.BrokerUserPwd,
+	)
+}
+
+func (this *CClient) topicJoin(topic *string, serverUniqueCode *string) *string {
 	var buffer bytes.Buffer
-	buffer.WriteString(topic)
-	bTopic := []byte(topic)
+	buffer.WriteString(*topic)
+	bTopic := []byte(*topic)
 	if bTopic[len(bTopic)-1] != '/' {
 		buffer.WriteString("/")
 	}
