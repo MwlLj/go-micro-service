@@ -2,7 +2,10 @@ package url
 
 import (
 	"bytes"
+	"log"
 )
+
+var _ = log.Fatalln
 
 type IUrlMaker interface {
 	Make(topic *string) *string
