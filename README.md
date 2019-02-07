@@ -90,3 +90,22 @@ golang分布式框架
 	这个服务就是 master (master 节点的逻辑不需要使用者关心, 使用者只需要通过 GetMasterNode 接口获取此时的 master 节点对应的服务信息就可以)
 * 负载均衡 获取normal节点 是通过 GetNormalNodeAlgorithm 来指定所需的算法
 * 通过 GetNormalNodeAlgorithm 返回的对象, 调用 Get 方法就可以, 获取到一个 normal 节点信息
+
+## 结构说明
+* mqtt类服务的负载均衡中间件结构
+1. 负载均衡中间件服务器
+	> 接收所有的消息, 将发送者的url中的最后一部分(微服务的uniquecode) 截取出来, 换成配置文件中匹配的服务的 uuid, 并在后面加上发送者的 topic
+	> 流程举例:
+		发送者topic:
+			/login/user
+		接收请求的微服务的名称:
+			cfgs
+		接收请求的微服务的uniquecode:
+			efda4376-529c-4752-a264-553aa0c7f989
+		负载均衡中间件服务器接收到的完整topic:
+			/login/user/efda4376-529c-4752-a264-553aa0c7f989
+		负载均衡中间件服务器发送的topic:
+			配置文件匹配的服务在服务中心中注册的服务uniquecode + /login/user
+2. 微服务
+	> 订阅注册到服务中心的服务uniquecode + topic
+3. 目的
