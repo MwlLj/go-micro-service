@@ -26,30 +26,30 @@ func (this *CServer) Start(path string) error {
 		log.Fatalln("mqtt load balance start failed, err: ", err)
 		return err
 	}
-	// register mqtt load balance to service discovery
-	brokerRegisterInfo := configInfo.BrokerRegisterInfo
-	var brokerServiceDiscoveryConns []proto.CConnectProperty
-	for _, item := range brokerRegisterInfo.Conns {
-		brokerServiceDiscoveryConns = append(brokerServiceDiscoveryConns, proto.CConnectProperty{
+	// register http load balance to service discovery
+	loadBalanceInfo := configInfo.LoadBalanceInfo
+	var loadBalanceServiceDiscoveryConns []proto.CConnectProperty
+	for _, item := range loadBalanceInfo.Conns {
+		loadBalanceServiceDiscoveryConns = append(loadBalanceServiceDiscoveryConns, proto.CConnectProperty{
 			ServerHost: item.ServerHost,
 			ServerPort: item.ServerPort,
 			ServiceId:  item.ServiceId,
 		})
 	}
-	brokerServiceObj := sd.New(&sd.CInitProperty{
-		PathPrefix: brokerRegisterInfo.PathPrefix,
-		ServerMode: brokerRegisterInfo.ServerMode,
-		ServerName: brokerRegisterInfo.ServerName,
+	loadBalanceServiceObj := sd.New(&sd.CInitProperty{
+		PathPrefix: loadBalanceInfo.PathPrefix,
+		ServerMode: loadBalanceInfo.ServerMode,
+		ServerName: loadBalanceInfo.ServerName,
 		NodeData: proto.CNodeData{
-			ServerIp:         brokerRegisterInfo.NodeData.Host,
-			ServerPort:       brokerRegisterInfo.NodeData.Port,
-			ServerUniqueCode: brokerRegisterInfo.NodeData.ServerUniqueCode,
-			Weight:           brokerRegisterInfo.Weight,
+			ServerIp:         loadBalanceInfo.NodeData.Host,
+			ServerPort:       loadBalanceInfo.NodeData.Port,
+			ServerUniqueCode: loadBalanceInfo.NodeData.ServerUniqueCode,
+			Weight:           loadBalanceInfo.Weight,
 		},
-		Conns:        brokerServiceDiscoveryConns,
+		Conns:        loadBalanceServiceDiscoveryConns,
 		ConnTimeoutS: 10})
-	if brokerServiceObj == nil {
-		log.Fatalln("mqtt load balance register service discovery error")
+	if loadBalanceServiceObj == nil {
+		log.Fatalln("http load balance register service discovery error")
 		return errors.New("register to service discovery error")
 	}
 	// register service to service discovery
@@ -76,16 +76,6 @@ func (this *CServer) Start(path string) error {
 	if err != nil {
 		log.Fatalln("NormalNodeAlgorithm is not support, err: ", err)
 		return err
-	}
-	// add recv broker info
-	recvBrokerInfo := configInfo.RecvBrokerInfo
-	for _, item := range recvBrokerInfo.Nets {
-		bls.AddRecvNetInfo(nil, &bl.CNetInfo{
-			Host:     item.Host,
-			Port:     item.Port,
-			UserName: item.UserName,
-			UserPwd:  item.UserPwd,
-		})
 	}
 	// add router rules
 	routerRuleInfo := configInfo.RouterRuleInfo

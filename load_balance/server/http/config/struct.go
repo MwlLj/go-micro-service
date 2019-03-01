@@ -45,8 +45,7 @@ type CRouterRuleInfo struct {
 }
 
 type CConfigInfo struct {
-	BrokerRegisterInfo  CServiceDiscory  `json:"broker-reg"`
+	LoadBalanceInfo     CServiceDiscory  `json:"loadbalance-info"`
 	ServiceRegisterInfo CLoadBalanceInfo `json:"service-reg"`
-	RecvBrokerInfo      CRecvBrokerInfo  `json:"recvbroker-info"`
 	RouterRuleInfo      CRouterRuleInfo  `json:"router-rule"`
 }
