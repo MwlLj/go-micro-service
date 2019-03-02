@@ -91,9 +91,9 @@ func (this *CServer) Start(path string) error {
 	bls.SetConfigInfo(&blConfigInfo)
 	// run
 	err = bls.Run(bl.CNetInfo{
-		Host:       brokerRegisterInfo.NodeData.Host,
-		Port:       brokerRegisterInfo.NodeData.Port,
-		ExtraField: brokerRegisterInfo.NodeData.ServerUniqueCode,
+		Host:       loadBalanceInfo.NodeData.Host,
+		Port:       loadBalanceInfo.NodeData.Port,
+		ExtraField: loadBalanceInfo.NodeData.ServerUniqueCode,
 	})
 	if err != nil {
 		log.Fatalln("run mqtt load balance error, err: ", err)

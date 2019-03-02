@@ -8,6 +8,9 @@ import (
 )
 
 type IClient interface {
+	/*
+		@bref get mqtt load-balance broker info
+	*/
 	GetConnect() (mqtt_comm.CMqttComm, url.IUrlMaker, error)
 	Subscribe(action string, topic string, qos int, handler mqtt_comm.CHandler, user interface{}) error
 	StartRecver()

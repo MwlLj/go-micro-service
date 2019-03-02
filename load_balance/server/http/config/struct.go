@@ -1,6 +1,6 @@
 package config
 
-type CBrokerNetInfo struct {
+type CNodeNetInfo struct {
 	Host             string `json:"host"`
 	Port             int    `json:"port"`
 	UserName         string `json:"user-name"`
@@ -18,7 +18,7 @@ type CServiceDiscory struct {
 	PathPrefix string               `json:"path-prefix"`
 	ServerMode string               `json:"server-mode"`
 	ServerName string               `json:"server-name"`
-	NodeData   CBrokerNetInfo       `json:"nodedata"`
+	NodeData   CNodeNetInfo         `json:"nodedata"`
 	Weight     int                  `json:"weight"`
 	Conns      []CServiceDiscoryNet `json:"conns"`
 }
@@ -28,10 +28,6 @@ type CLoadBalanceInfo struct {
 	ServerMode          string               `json:"server-mode"`
 	NormalNodeAlgorithm string               `json:"normal-node-algorithm"`
 	Conns               []CServiceDiscoryNet `json:"conns"`
-}
-
-type CRecvBrokerInfo struct {
-	Nets []CBrokerNetInfo `json:"nets"`
 }
 
 type CRouterRule struct {
