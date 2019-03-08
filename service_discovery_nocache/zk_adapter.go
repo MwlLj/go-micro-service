@@ -44,10 +44,24 @@ func (this *CZkAdapter) DeleteConnProperty(serviceId *string) error {
 
 func (this *CZkAdapter) AfterConnect(conn *zk.Conn) error {
 	this.m_conn = conn
-	err := this.createMasterAndNormalNode()
+	path, err := this.createMasterAndNormalNode()
 	if err == nil {
 		this.m_isDisconnect = false
 	}
+	go func() {
+		for {
+			_, _, ech, err := this.m_conn.ChildrenW(*path)
+			if err != nil {
+				continue
+			}
+			event := <-ech
+			fmt.Println("[INFO] watch master/normal node children",
+				"path:", event.Path,
+				"state:", event.State,
+				"type:", event.Type,
+				"server:", event.Server)
+		}
+	}()
 	return err
 }
 
@@ -74,17 +88,17 @@ func (this *CZkAdapter) joinNodeData() (*string, error) {
 	return &d, nil
 }
 
-func (this *CZkAdapter) createMasterAndNormalNode() error {
+func (this *CZkAdapter) createMasterAndNormalNode() (*string, error) {
 	data, err := this.joinNodeData()
 	if err != nil {
 		fmt.Println("[ERROR] join Node Data error")
-		return err
+		return nil, err
 	}
 	pathPrefix := this.JoinPathPrefix(&this.m_pathPrefix, &this.m_serverName)
 	err = this.createParents(*pathPrefix)
 	if err != nil {
 		fmt.Println("[ERROR] create parents error")
-		return err
+		return nil, err
 	}
 	err = this.createMasterNode(data, pathPrefix)
 	if err != nil {
@@ -98,7 +112,7 @@ func (this *CZkAdapter) createMasterAndNormalNode() error {
 		// master create success
 		fmt.Println("[SUCCESS] Identify: master node")
 	}
-	return err
+	return pathPrefix, err
 }
 
 func (this *CZkAdapter) createParents(root string) error {

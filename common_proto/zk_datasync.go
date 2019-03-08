@@ -49,7 +49,35 @@ func (this *CZkDataSync) Init(conns *[]CConnectProperty, pathPrefix string, conn
 
 func (this *CZkDataSync) AfterConnect(conn *zk.Conn) error {
 	this.m_conn = conn
+	path := this.JoinPathPrefix(&this.m_pathPrefix, nil)
+	servers, _, err := this.m_conn.Children(*path)
+	if err != nil {
+		return err
+	}
 	this.syncData()
+	go func() {
+		for _, server := range servers {
+			// fmt.Println("[DEBUG] server: ", server)
+			serverTmp := server
+			nodeRootPath := this.JoinPathPrefix(&this.m_pathPrefix, &serverTmp)
+			for {
+				_, _, ech, err := this.m_conn.ChildrenW(*nodeRootPath)
+				if err != nil {
+					continue
+				}
+				event := <-ech
+				fmt.Println("[INFO] watch service children",
+					"path:", event.Path,
+					"state:", event.State,
+					"type:", event.Type,
+					"server:", event.Server)
+				if event.Type == zk.EventNodeChildrenChanged ||
+					event.Type == zk.EventNodeDataChanged {
+					this.syncData()
+				}
+			}
+		}
+	}()
 	this.m_isConnect = true
 	this.m_connChan <- true
 	close(this.m_connChan)
