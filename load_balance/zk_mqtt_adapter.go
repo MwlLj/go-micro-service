@@ -156,7 +156,7 @@ func (this *CZkMqttAdapter) onMessage(topic *string, action *string, request *st
 		// buffer.WriteString("/")
 		buffer.WriteString(serverUuid)
 	}
-	response, err := mqttComm.Send(*action, buffer.String(), *request, qos, this.m_transmitTimeoutS)
+	response, err := mqttComm.Send(*action, buffer.String(), *request, true, qos, this.m_transmitTimeoutS)
 	return &response, err
 }
 
