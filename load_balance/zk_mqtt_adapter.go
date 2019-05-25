@@ -95,12 +95,12 @@ func (this *CZkMqttAdapter) connectBroker(brokerInfo *CMqTopicBrokerInfo) mqtt_c
 
 func (this *CZkMqttAdapter) findMqttConnect(brokerInfo *CMqTopicBrokerInfo) (mqtt_comm.CMqttComm, error) {
 	brokerHash := this.brokerHostJoin(&brokerInfo.info.Host, brokerInfo.info.Port)
-	value, ok := this.m_mqConnectMap.Load(brokerHash)
+	value, ok := this.m_mqConnectMap.Load(*brokerHash)
 	var mqttComm mqtt_comm.CMqttComm = nil
 	if !ok {
 		// not exist
 		mqttComm = this.connectBroker(brokerInfo)
-		this.m_mqConnectMap.Store(brokerHash, mqttComm)
+		this.m_mqConnectMap.Store(*brokerHash, mqttComm)
 	} else {
 		// exist
 		mqttComm = value.(mqtt_comm.CMqttComm)
